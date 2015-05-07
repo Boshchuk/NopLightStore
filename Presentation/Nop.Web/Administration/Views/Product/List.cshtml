@@ -24,7 +24,9 @@
             @if (!Model.IsLoggedInAsVendor)
             {
                 //a vendor cannot import products
-                <input type="button" id="importexcel" name="importexcel" class="k-button" value="@T("Admin.Common.ImportFromExcel")" />
+                <input type="button" id="importexcel" name="importexcel" class="k-button" value="@T("Admin.Common.ImportFromExcel")"/>
+
+                <input type="button" id="nccimportexcel" name="importexcel" class="k-button" value="Свой импорт" /> 
             }
             <input type="button" id="delete-selected" class="k-button" value="@T("Admin.Common.Delete.Selected")" />
         </div>
@@ -366,6 +368,50 @@
         $("#importexcel").click(function (e) {
             e.preventDefault();
             var window = $("#importexcel-window");
+            if (!window.data("kendoWindow")) {
+                window.kendoWindow({
+                    modal: true,
+                    width: "400px",
+                    title: "@T("Admin.Common.ImportFromCsv")",
+                    actions: ["Close"]
+                });
+            }
+            window.data('kendoWindow').center().open();
+        });
+    });
+</script>
+
+@*custom import products form*@
+<div id="nccimportexcel-window" style="display:none;">
+    @using (Html.BeginForm("NccImportExcel", "Product", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+        <table style="text-align:left;">
+            <tr>
+                <td colspan="2">
+                    <em>@T("Admin.Catalog.Products.List.ImportFromExcelTip")</em>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    @T("Admin.Common.ExcelFile"):
+                </td>
+                <td>
+                    <input type="file" id="importexcelfile" name="importexcelfile" />
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <input type="submit" class="k-button" value="@T("Admin.Common.ImportFromExcel")" />
+                </td>
+            </tr>
+        </table>
+    }
+</div>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#nccimportexcel").click(function (e) {
+            e.preventDefault();
+            var window = $("#nccimportexcel-window");
             if (!window.data("kendoWindow")) {
                 window.kendoWindow({
                     modal: true,
