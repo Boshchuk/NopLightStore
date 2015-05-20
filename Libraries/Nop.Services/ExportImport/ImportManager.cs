@@ -22,11 +22,11 @@ namespace Nop.Services.ExportImport
     {
         #region Fields
 
-        private readonly IProductService _productService;
+        protected readonly IProductService _productService;
         private readonly ICategoryService _categoryService;
         private readonly IManufacturerService _manufacturerService;
-        private readonly IPictureService _pictureService;
-        private readonly IUrlRecordService _urlRecordService;
+        protected readonly IPictureService _pictureService;
+        protected readonly IUrlRecordService _urlRecordService;
         private readonly IStoreContext _storeContext;
         private readonly INewsLetterSubscriptionService _newsLetterSubscriptionService;
         private readonly ICountryService _countryService;

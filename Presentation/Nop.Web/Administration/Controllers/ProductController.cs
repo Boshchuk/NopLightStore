@@ -15,6 +15,7 @@ using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Discounts;
 using Nop.Core.Domain.Media;
 using Nop.Core.Domain.Orders;
+using Nop.Ncc;
 using Nop.Services.Catalog;
 using Nop.Services.Common;
 using Nop.Services.Customers;
@@ -4142,10 +4143,16 @@ namespace Nop.Admin.Controllers
             
             try
             {
+                var importManager = new NccImportManager(_productService,
+                    this._categoryService,
+                    this._manufacturerService,
+                    this._pictureService,
+                    this._urlRecordService, null, null, null, null );
+
                 var file = Request.Files["importexcelfile"];
                 if (file != null && file.ContentLength > 0)
                 {
-                    _importManager.ImportProductsFromXlsx(file.InputStream);
+                    importManager.ImportProductsFromXlsx(file.InputStream);
                 }
                 else
                 {

@@ -1,2 +1,2 @@
-DataProvider: sqlce
-DataConnectionString: Data Source=|DataDirectory|\Nop.Db.sdf;Persist Security Info=False
+DataProvider: sqlserver
+DataConnectionString: Data Source=NCC-TESTPC\SQLEXPRESS;Initial Catalog=LightStortDB;Integrated Security=True;Persist Security Info=False
