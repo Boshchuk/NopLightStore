@@ -17,16 +17,20 @@
         <div class="options">
             <a href="@Url.Action("Create")" class="k-button">@T("Admin.Common.AddNew")</a>
             <a href="@Url.Action("DownloadCatalogAsPdf")" class="k-button">@T("Admin.Catalog.Products.List.DownloadPDF")</a>
-            <a href="@Url.Action("ExportXmlAll")" class="k-button">@T("Admin.Common.ExportToXml.All")</a>
+            @*
+                <a href="@Url.Action("ExportXmlAll")" class="k-button">@T("Admin.Common.ExportToXml.All")</a>
             <input type="button" id="exportxml-selected" class="k-button" value="@T("Admin.Common.ExportToXml.Selected")" />
             <a href="@Url.Action("ExportExcelAll")" class="k-button">@T("Admin.Common.ExportToExcel.All")</a>
             <input type="button" id="exportexcel-selected" class="k-button" value="@T("Admin.Common.ExportToExcel.Selected")" />
+                *@
             @if (!Model.IsLoggedInAsVendor)
             {
                 //a vendor cannot import products
-                <input type="button" id="importexcel" name="importexcel" class="k-button" value="@T("Admin.Common.ImportFromExcel")"/>
+                @*<input type="button" id="importexcel" name="importexcel" class="k-button" value="@T("Admin.Common.ImportFromExcel")"/>*@
 
-                <input type="button" id="nccimportexcel" name="importexcel" class="k-button" value="Свой импорт" /> 
+                @*<input type="button" id="nccimportexcel" name="importexcel" class="k-button" value="Импорт продуктов в наличии" />*@
+
+                <input type="button" id="nccimportincategory" name="importexcel" class="k-button" value="Импорт в категорию" />
             }
             <input type="button" id="delete-selected" class="k-button" value="@T("Admin.Common.Delete.Selected")" />
         </div>
@@ -381,6 +385,8 @@
     });
 </script>
 
+
+
 @*custom import products form*@
 <div id="nccimportexcel-window" style="display:none;">
     @using (Html.BeginForm("NccImportExcel", "Product", FormMethod.Post, new { enctype = "multipart/form-data" }))
@@ -408,8 +414,8 @@
     }
 </div>
 <script type="text/javascript">
-    $(document).ready(function () {
-        $("#nccimportexcel").click(function (e) {
+    $(document).ready(function() {
+        $("#nccimportexcel").click(function(e) {
             e.preventDefault();
             var window = $("#nccimportexcel-window");
             if (!window.data("kendoWindow")) {
@@ -424,6 +430,55 @@
         });
     });
 </script>
+
+@*import in category*@
+<div id="nccimportincategory-window" style="display:none;">
+    @using (Html.BeginForm("ImportInCategory", "Product", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+        <table style="text-align:left;">
+            <tr>
+                <td colspan="2">
+                    <em>@T("Admin.Catalog.Products.List.ImportFromExcelTip")</em>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    @T("Admin.Common.ExcelFile"):
+                </td>
+                <td>
+                    <input type="file" id="importexcelfile" name="importexcelfile" />
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <input type="submit" class="k-button" value="@T("Admin.Common.ImportFromExcel")" />
+                </td>
+            </tr>
+        </table>
+    }
+</div>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $("#nccimportincategory").click(function(e) {
+            e.preventDefault();
+            var window = $("#nccimportincategory-window");
+            if (!window.data("kendoWindow")) {
+                window.kendoWindow({
+                    modal: true,
+                    width: "400px",
+                    title: "@T("Admin.Common.ImportFromCsv")",
+                    actions: ["Close"]
+                });
+            }
+            window.data('kendoWindow').center().open();
+        });
+    });
+</script>
+
+
+
+
+
 
 @*export selected (XML). We don't use GET approach because it's limited to 2K-4K chars and won't work for large number of entities*@
 @using (Html.BeginForm("ExportXmlSelected", "Product", FormMethod.Post, new { id = "export-xml-selected-form" }))

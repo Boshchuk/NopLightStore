@@ -1,32 +1,50 @@
-﻿using System;
+﻿#region Usings
+using System;
 using System.Collections.Generic;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Nop.Services.ExportImport;
-
 using Nop.Core;
 using Nop.Core.Domain.Catalog;
-using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Media;
-using Nop.Core.Domain.Messages;
 using Nop.Services.Catalog;
 using Nop.Services.Directory;
+using Nop.Services.ExportImport;
 using Nop.Services.Media;
 using Nop.Services.Messages;
 using Nop.Services.Seo;
 using OfficeOpenXml;
 using OfficeOpenXml.Drawing;
-using OfficeOpenXml.FormulaParsing.Excel.Functions.Math;
-using Product = Nop.Core.Domain.Catalog.Product;
 
+#endregion
 
 namespace Nop.Ncc
 {
     public class NccImportManager : ImportManager
     {
+        #region .ctor
+        public NccImportManager(IProductService productService,
+            ICategoryService categoryService,
+            IManufacturerService manufacturerService,
+            IPictureService pictureService,
+            IUrlRecordService urlRecordService,
+            IStoreContext storeContext,
+            INewsLetterSubscriptionService newsLetterSubscriptionService,
+            ICountryService countryService,
+            IStateProvinceService stateProvinceService)
+            : base(productService, categoryService, manufacturerService, pictureService, urlRecordService, storeContext, newsLetterSubscriptionService, countryService, stateProvinceService)
+        {
+
+        }
+
+        public NccImportManager()
+            : base(null, null, null, null, null, null, null, null, null)
+        {
+
+        }
+        #endregion
+
+        #region temp unused
+
         /// <summary>
         /// Import products from XLSX file
         /// </summary>
@@ -41,27 +59,36 @@ namespace Nop.Ncc
             }
         }
 
+
         public List<ExceledProductData> GetProductsProductDatas(Stream stream)
         {
             var result = new List<ExceledProductData>();
 
             using (var xlPackage = new ExcelPackage(stream))
             {
+
                 // get the first worksheet in the workbook
-                ExcelWorksheet worksheet = xlPackage.Workbook.Worksheets.FirstOrDefault();
+                var worksheet = xlPackage.Workbook.Worksheets.FirstOrDefault();
                 if (worksheet == null)
                 {
                     throw new NopException("No worksheet found");
                 }
 
                 const int columsDataLength = 6;
-                int startRow = 2;
+
+                const int firstItemPos = 1;
+                const int secondItemPos = 3;
+                const int therdItemPos = 5;
+
+
+                // TODO impliment search mechanithm to find start position
+                var startRow = 2;
                 while (true)
                 {
                     bool allColumnsAreEmpty = true;
                     for (var i = 1; i <= columsDataLength; i++)
                     {
-                        if (worksheet.Cells[startRow, i].Value != null && 
+                        if (worksheet.Cells[startRow, i].Value != null &&
                             !String.IsNullOrEmpty(worksheet.Cells[startRow, i].Value.ToString()))
                         {
                             allColumnsAreEmpty = false;
@@ -73,101 +100,190 @@ namespace Nop.Ncc
                         break;
                     }
 
+                    //TODO get file name
+                    var fileName = "test"; // remove xslt
 
-                    result.Add(ConstructProduct(worksheet, startRow, 1));
-                    result.Add(ConstructProduct(worksheet, startRow, 3));
-                    result.Add(ConstructProduct(worksheet, startRow, 5));
+                    var cat = _categoryService.GetAllCategories(fileName); //TODO chek by == name
+
+                    var catId = 0;
+
+
+                    if (cat.Count == 0)
+                    {
+                        var categoryName = fileName;
+
+                        var category = new Category
+                        {
+                            Name = categoryName
+                        };
+
+                        _categoryService.InsertCategory(category);
+
+                        catId = _categoryService.GetAllCategories(categoryName).FirstOrDefault().Id;
+                    }
+                    else
+                    {
+                        catId = cat.FirstOrDefault().Id;
+                    }
+
+
+
+
+                    result.Add(ConstructProduct(worksheet, startRow, firstItemPos, catId));
+                    result.Add(ConstructProduct(worksheet, startRow, secondItemPos, catId));
+                    result.Add(ConstructProduct(worksheet, startRow, therdItemPos, catId));
 
                     //next 3 product
                     startRow++;
                 }
             }
-            
+
             return result;
         }
 
-        #region .ctor
-        public NccImportManager(IProductService productService,
-            ICategoryService categoryService,
-            IManufacturerService manufacturerService,
-            IPictureService pictureService,
-            IUrlRecordService urlRecordService,
-            IStoreContext storeContext,
-            INewsLetterSubscriptionService newsLetterSubscriptionService,
-            ICountryService countryService,
-            IStateProvinceService stateProvinceService) : base(productService, categoryService, manufacturerService, pictureService, urlRecordService, storeContext, newsLetterSubscriptionService, countryService, stateProvinceService)
-        {
-            
-        }
-
-        public NccImportManager()
-            : base(null, null, null, null, null, null, null, null, null)
-        {
-
-        }
         #endregion
 
+        public void InportInCategory(Stream stream, string fileName)
+        {
+            var productDatas = GetProductsProductDatas(stream,fileName);
 
+            foreach (var exceledProductData in productDatas)
+            {
+                ProceesProduct(exceledProductData);
+            }
+        }
+
+        public List<ExceledProductData> GetProductsProductDatas(Stream stream, string fileName)
+        {
+            var result = new List<ExceledProductData>();
+
+            using (var xlPackage = new ExcelPackage(stream))
+            {
+
+                // get the first worksheet in the workbook
+                var worksheet = xlPackage.Workbook.Worksheets.FirstOrDefault();
+                if (worksheet == null)
+                {
+                    throw new NopException("No worksheet found");
+                }
+
+                const int columsDataLength = 6;
+
+                const int firstItemPos = 1;
+                const int secondItemPos = 3;
+                const int therdItemPos = 5;
+
+
+                // TODO impliment search mechanithm to find start position
+                var startRow = 2;
+                while (true)
+                {
+                    var allColumnsAreEmpty = true;
+                    for (var i = 1; i <= columsDataLength; i++)
+                    {
+                        if (worksheet.Cells[startRow, i].Value != null &&
+                            !String.IsNullOrEmpty(worksheet.Cells[startRow, i].Value.ToString()))
+                        {
+                            allColumnsAreEmpty = false;
+                            break;
+                        }
+                    }
+                    if (allColumnsAreEmpty)
+                    {
+                        break;
+                    }
+
+                    //TODO get file name
+                    var name = fileName.Replace(".xlsx",""); // remove xslt
+
+                    var cat = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == name); //TODO chek by == name
+
+                    var catId = 0;
+
+
+                    if (cat == null)
+                    {
+                        var categoryName = name;
+
+                        var category = new Category
+                        {
+                            Name = categoryName
+                        };
+
+
+                        category.CreatedOnUtc = DateTime.UtcNow;
+                        category.UpdatedOnUtc = DateTime.UtcNow;
+                        category.Published = true;
+                        category.PageSize = 16;
+
+                        _categoryService.InsertCategory(category);
+
+                        var firstOrDefault = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == categoryName);
+                        if (firstOrDefault != null)
+                        {
+                            catId = firstOrDefault.Id;
+                        }
+                    }
+                    else
+                    {
+                        catId = cat.Id;
+                    }
+                    
+                    result.Add(ConstructProduct(worksheet, startRow, firstItemPos, catId));
+                    result.Add(ConstructProduct(worksheet, startRow, secondItemPos, catId));
+                    result.Add(ConstructProduct(worksheet, startRow, therdItemPos, catId));
+
+                    //next 3 product
+                    startRow++;
+                }
+            }
+
+            return result;
+        }
+
+
+
+        
         public Picture GetPictureStrict(ExcelWorksheet worksheet, int row, int column , bool isNew)
         {
-
             var pictureRow = row - 1;
             var pictureColumn = column - 1;
 
 
             var pictureOnCoordinates = worksheet.Drawings.Where(p => ((p.To.Column == pictureColumn || p.To.Column == pictureColumn+1) && (p.To.Row == pictureRow)));
 
-            ExcelDrawing excelDrawing = null;
-
-            if (pictureOnCoordinates.Count() == 1)
-            {
-                excelDrawing = pictureOnCoordinates.FirstOrDefault();
-            }
-            else
-            {
-                //TODO: find upper image
-                excelDrawing = pictureOnCoordinates.LastOrDefault();
-            }
-
-            //ExcelDrawing excelDrawing = worksheet.Drawings.FirstOrDefault(p => ((p.From.Column == column -1) && (p.From.Row == row-1)));
-
+            var excelDrawing = pictureOnCoordinates.Count() == 1 ? pictureOnCoordinates.FirstOrDefault() : pictureOnCoordinates.LastOrDefault();
             
-
             var picture = excelDrawing as ExcelPicture;
 
 
             var stream = new MemoryStream();
             picture.Image.Save(stream, picture.ImageFormat);
-            BinaryReader streamreader = new BinaryReader(stream);
+            var streamreader = new BinaryReader(stream);
 
             stream.Position = 0;
 
             var data = streamreader.ReadBytes((int) stream.Length);
-
-
-
-
-            var pict = new Picture() { IsNew = isNew, PictureBinary = data, MimeType = picture.ImageFormat.ToString() };
+            
+            var pict = new Picture
+            {
+                IsNew = isNew, PictureBinary = data, MimeType = picture.ImageFormat.ToString()
+            };
 
             return pict;
         }
 
-        public ExceledProductData ConstructProduct(ExcelWorksheet worksheet, int iRow, int column)
+        public ExceledProductData ConstructProduct(ExcelWorksheet worksheet, int iRow, int column, int categoryId)
         {
-         // pict.Image.Save(path);
             var priceColumn = column + 1;
 
-            string name = Convert.ToString(worksheet.Cells[iRow, column].Value);
-            string shortDescription = Convert.ToString(worksheet.Cells[iRow, column].Value);
-            string fullDescription = Convert.ToString(worksheet.Cells[iRow, column].Value);
+            var name = Convert.ToString(worksheet.Cells[iRow, column].Value);
+            var shortDescription = Convert.ToString(worksheet.Cells[iRow, column].Value);
+            var fullDescription = Convert.ToString(worksheet.Cells[iRow, column].Value);
 
-            string sku = Convert.ToString(worksheet.Cells[iRow, column].Value);
+            var sku = Convert.ToString(worksheet.Cells[iRow, column].Value);
 
-            decimal price = Convert.ToDecimal(worksheet.Cells[iRow, priceColumn].Value);
-
-          //  string picture1 = Convert.ToString(worksheet.Cells[row, column].Value); //TODO: get picture
-            
-            
+            var price = Convert.ToDecimal(worksheet.Cells[iRow, priceColumn].Value);
 
             Product product = null;
 
@@ -191,24 +307,34 @@ namespace Nop.Ncc
 
             product.UpdatedOnUtc = DateTime.UtcNow;
             product.CreatedOnUtc = DateTime.UtcNow;
+            product.Published = true;
 
-
-            //product.ProductPictures.Add(new ProductPicture(){});
+            
+            product.ProductType = ProductType.SimpleProduct;
+            product.VisibleIndividually = true;
+         
 
             var picture = GetPictureStrict(worksheet, iRow, column, isNew);
 
+          
+
+
+            
 
             return new ExceledProductData
             {
-                Product = product, InNew = isNew, Picture = picture
+                Product = product,
+                InNew = isNew,
+                Picture = picture,
+                CategoryId = categoryId
             };
         }
 
-        public void ProceesProduct( ExceledProductData productData)
+        public void ProceesProduct(ExceledProductData productData)
         {
             var newProduct = productData.InNew;
             var product = productData.Product;
-            
+           
             if (newProduct)
             {
                 _productService.InsertProduct(product);
@@ -217,6 +343,21 @@ namespace Nop.Ncc
             {
                 _productService.UpdateProduct(product);
             }
+
+            
+            Category test = _categoryService.GetAllCategories().FirstOrDefault(c => c.Id == productData.CategoryId);
+            
+            if (test != null)
+            {
+                var productCategory = new ProductCategory
+                {
+                    ProductId = product.Id,
+                    CategoryId = productData.CategoryId,
+                  //DisplayOrder = model.DisplayOrder
+                };
+                 product.ProductCategories.Add(productCategory);
+            }
+
             #region
             //search engine name
            // _urlRecordService.SaveSlug(product, product.ValidateSeName(seName, product.Name, true), 0); TODO: victor, invistigate
@@ -271,8 +412,6 @@ namespace Nop.Ncc
 
             #endregion
 
-            //pictures
-            //foreach (var picturePath in new[] { picture1, picture2, picture3 })
 
             if (productData.Picture == null)
             {
@@ -312,10 +451,10 @@ namespace Nop.Ncc
                 }
 
             }
-
+            
             //update "HasTierPrices" and "HasDiscountsApplied" properties
             _productService.UpdateHasTierPricesProperty(product);
             _productService.UpdateHasDiscountsApplied(product);
-        }
+            }
     }
 }

@@ -4126,33 +4126,55 @@ namespace Nop.Admin.Controllers
 
         #endregion
 
-
         [HttpPost]
-        public ActionResult NccImportExcel()
+        public ActionResult ImportInCategory()
+        {
+            return FileAction(NccImportInCategoryAction);
+        }
+
+        private void NccImportInCategoryAction(HttpPostedFileBase file)
+        {
+            var importManager = new NccImportManager(_productService,
+              this._categoryService,
+              this._manufacturerService,
+              this._pictureService,
+              this._urlRecordService, null, null, null, null);
+
+            var fileName = file.FileName;
+
+            importManager.InportInCategory(file.InputStream,fileName);
+        }
+
+        private void NccImportAction(HttpPostedFileBase file)
+        {
+            var importManager = new NccImportManager(_productService,
+              this._categoryService,
+              this._manufacturerService,
+              this._pictureService,
+              this._urlRecordService, null, null, null, null);
+            importManager.ImportProductsFromXlsx(file.InputStream);
+        }
+
+        private ActionResult FileAction(Action<HttpPostedFileBase> action)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
             {
                 return AccessDeniedView();
             }
-            
+
             //a vendor cannot import products
             if (_workContext.CurrentVendor != null)
             {
                 return AccessDeniedView();
             }
-            
+
             try
             {
-                var importManager = new NccImportManager(_productService,
-                    this._categoryService,
-                    this._manufacturerService,
-                    this._pictureService,
-                    this._urlRecordService, null, null, null, null );
-
-                var file = Request.Files["importexcelfile"];
+              
+                HttpPostedFileBase file = Request.Files["importexcelfile"];
                 if (file != null && file.ContentLength > 0)
                 {
-                    importManager.ImportProductsFromXlsx(file.InputStream);
+                    action(file);
                 }
                 else
                 {
@@ -4168,6 +4190,14 @@ namespace Nop.Admin.Controllers
                 return RedirectToAction("List");
             }
 
+
+        
+        }
+
+        [HttpPost]
+        public ActionResult NccImportExcel()
+        {
+            return FileAction(NccImportAction);
         }
     }
 }
