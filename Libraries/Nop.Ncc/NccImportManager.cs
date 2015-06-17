@@ -21,6 +21,12 @@ namespace Nop.Ncc
 {
     public class NccImportManager : ImportManager
     {
+        private const string ErrorMessage = "Неправильный формат файла. Листы в нем не обнаружены";
+
+        private const string CatalogCategoryName = "Каталог";
+
+        private const string ExistingInStore = "Товары в магазине";
+
         #region .ctor
         public NccImportManager(IProductService productService,
             ICategoryService categoryService,
@@ -43,35 +49,52 @@ namespace Nop.Ncc
         }
         #endregion
 
-        #region temp unused
-
         /// <summary>
         /// Import products from XLSX file
         /// </summary>
         /// <param name="stream">Stream</param>
         public override void ImportProductsFromXlsx(Stream stream)
         {
-            var productDatas = GetProductsProductDatas(stream);
-
-            foreach (var exceledProductData in productDatas)
-            {
-                ProceesProduct(exceledProductData);
-            }
+            var productDatas = GetProductsProductDatas(stream, ExistingInStore, false);
+            ProcessData(productDatas);
+        }
+        
+        public void InportInCategory(Stream stream, string fileName)
+        {
+            var productDatas = GetProductsProductDatas(stream, fileName, true);
+            ProcessData(productDatas);
         }
 
+        private void AddInitCategory(string categoryName)
+        {
 
-        public List<ExceledProductData> GetProductsProductDatas(Stream stream)
+            // adding part
+            var category = new Category
+            {
+                Name = categoryName,
+                CreatedOnUtc = DateTime.UtcNow,
+                UpdatedOnUtc = DateTime.UtcNow,
+                Published = true,
+                PageSize = 16,
+                ShowOnHomePage = true,
+                IncludeInTopMenu = true,
+                DisplayOrder = 1,
+
+            };
+            _categoryService.InsertCategory(category);
+        }
+
+        private List<ExceledProductData> GetProductsProductDatas(Stream stream, string fileName, bool addInCatalog = false)
         {
             var result = new List<ExceledProductData>();
 
             using (var xlPackage = new ExcelPackage(stream))
             {
-
                 // get the first worksheet in the workbook
                 var worksheet = xlPackage.Workbook.Worksheets.FirstOrDefault();
                 if (worksheet == null)
                 {
-                    throw new NopException("No worksheet found");
+                    throw new NopException(ErrorMessage);
                 }
 
                 const int columsDataLength = 6;
@@ -80,102 +103,80 @@ namespace Nop.Ncc
                 const int secondItemPos = 3;
                 const int therdItemPos = 5;
 
+                var catalogName = fileName.Replace(".xlsx", ""); // remove xslt
 
-                // TODO impliment search mechanithm to find start position
-                var startRow = 2;
-                while (true)
+                var rootCatId = 0;
+                if (addInCatalog)
                 {
-                    bool allColumnsAreEmpty = true;
-                    for (var i = 1; i <= columsDataLength; i++)
+                    var rootCatalogCategory = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == CatalogCategoryName);
+
+                    if (rootCatalogCategory != null)
                     {
-                        if (worksheet.Cells[startRow, i].Value != null &&
-                            !String.IsNullOrEmpty(worksheet.Cells[startRow, i].Value.ToString()))
-                        {
-                            allColumnsAreEmpty = false;
-                            break;
-                        }
-                    }
-                    if (allColumnsAreEmpty)
-                    {
-                        break;
-                    }
-
-                    //TODO get file name
-                    var fileName = "test"; // remove xslt
-
-                    var cat = _categoryService.GetAllCategories(fileName); //TODO chek by == name
-
-                    var catId = 0;
-
-
-                    if (cat.Count == 0)
-                    {
-                        var categoryName = fileName;
-
-                        var category = new Category
-                        {
-                            Name = categoryName
-                        };
-
-                        _categoryService.InsertCategory(category);
-
-                        catId = _categoryService.GetAllCategories(categoryName).FirstOrDefault().Id;
+                        rootCatId = rootCatalogCategory.Id;
                     }
                     else
                     {
-                        catId = cat.FirstOrDefault().Id;
+                        AddInitCategory(CatalogCategoryName);
+                        var category = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == CatalogCategoryName);
+                        if (category != null)
+                        {
+                            rootCatId = category.Id;
+                        }
                     }
-
-
-
-
-                    result.Add(ConstructProduct(worksheet, startRow, firstItemPos, catId));
-                    result.Add(ConstructProduct(worksheet, startRow, secondItemPos, catId));
-                    result.Add(ConstructProduct(worksheet, startRow, therdItemPos, catId));
-
-                    //next 3 product
-                    startRow++;
                 }
-            }
 
-            return result;
-        }
+                var cat = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == catalogName); //TODO chek by == name
+                var catId = 0;
 
-        #endregion
-
-        public void InportInCategory(Stream stream, string fileName)
-        {
-            var productDatas = GetProductsProductDatas(stream,fileName);
-
-            foreach (var exceledProductData in productDatas)
-            {
-                ProceesProduct(exceledProductData);
-            }
-        }
-
-        public List<ExceledProductData> GetProductsProductDatas(Stream stream, string fileName)
-        {
-            var result = new List<ExceledProductData>();
-
-            using (var xlPackage = new ExcelPackage(stream))
-            {
-
-                // get the first worksheet in the workbook
-                var worksheet = xlPackage.Workbook.Worksheets.FirstOrDefault();
-                if (worksheet == null)
+                if (cat != null)
                 {
-                    throw new NopException("No worksheet found");
+                    catId = cat.Id;
+
+                    var list = _categoryService.GetProductCategoriesByCategoryId(catId, 0, 1000000);
+
+                    var ids = list.Select(c => c.ProductId);
+
+                    foreach (var id in ids)
+                    {
+                        var productToDelete = _productService.GetProductById(id);
+                        _productService.DeleteProduct(productToDelete);
+                    }
                 }
+                else
+                {
+                    var categoryName = catalogName;
 
-                const int columsDataLength = 6;
+                    var category = new Category
+                    {
+                        Name = categoryName,
+                        CreatedOnUtc = DateTime.UtcNow,
+                        UpdatedOnUtc = DateTime.UtcNow,
+                        Published = true,
+                        PageSize = 16,
+                        ShowOnHomePage = true,// TODO: invistigate why its not dispalyed,
+                        IncludeInTopMenu = true,
+                        DisplayOrder = 1,
+                    };
 
-                const int firstItemPos = 1;
-                const int secondItemPos = 3;
-                const int therdItemPos = 5;
+                    if (addInCatalog)
+                    {
+                        category.ParentCategoryId = rootCatId;
+                    }
+                    
+                    _categoryService.InsertCategory(category);
+
+                    var firstOrDefault = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == categoryName);
+                    if (firstOrDefault != null)
+                    {
+                        catId = firstOrDefault.Id;
+                    }
+                }
 
 
                 // TODO impliment search mechanithm to find start position
                 var startRow = 2;
+
+                var callForPrice = addInCatalog;
                 while (true)
                 {
                     var allColumnsAreEmpty = true;
@@ -193,45 +194,9 @@ namespace Nop.Ncc
                         break;
                     }
 
-                    //TODO get file name
-                    var name = fileName.Replace(".xlsx",""); // remove xslt
-
-                    var cat = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == name); //TODO chek by == name
-
-                    var catId = 0;
-
-
-                    if (cat == null)
-                    {
-                        var categoryName = name;
-
-                        var category = new Category
-                        {
-                            Name = categoryName
-                        };
-
-
-                        category.CreatedOnUtc = DateTime.UtcNow;
-                        category.UpdatedOnUtc = DateTime.UtcNow;
-                        category.Published = true;
-                        category.PageSize = 16;
-
-                        _categoryService.InsertCategory(category);
-
-                        var firstOrDefault = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == categoryName);
-                        if (firstOrDefault != null)
-                        {
-                            catId = firstOrDefault.Id;
-                        }
-                    }
-                    else
-                    {
-                        catId = cat.Id;
-                    }
-                    
-                    result.Add(ConstructProduct(worksheet, startRow, firstItemPos, catId));
-                    result.Add(ConstructProduct(worksheet, startRow, secondItemPos, catId));
-                    result.Add(ConstructProduct(worksheet, startRow, therdItemPos, catId));
+                    result.Add(ConstructProduct(worksheet, startRow, firstItemPos, catId, callForPrice));
+                    result.Add(ConstructProduct(worksheet, startRow, secondItemPos, catId, callForPrice));
+                    result.Add(ConstructProduct(worksheet, startRow, therdItemPos, catId, callForPrice));
 
                     //next 3 product
                     startRow++;
@@ -240,9 +205,6 @@ namespace Nop.Ncc
 
             return result;
         }
-
-
-
         
         public Picture GetPictureStrict(ExcelWorksheet worksheet, int row, int column , bool isNew)
         {
@@ -273,7 +235,7 @@ namespace Nop.Ncc
             return pict;
         }
 
-        public ExceledProductData ConstructProduct(ExcelWorksheet worksheet, int iRow, int column, int categoryId)
+        public ExceledProductData ConstructProduct(ExcelWorksheet worksheet, int iRow, int column, int categoryId, bool callForPrice = false)
         {
             var priceColumn = column + 1;
 
@@ -312,15 +274,10 @@ namespace Nop.Ncc
             
             product.ProductType = ProductType.SimpleProduct;
             product.VisibleIndividually = true;
-         
+            product.CallForPrice = callForPrice;
 
             var picture = GetPictureStrict(worksheet, iRow, column, isNew);
-
-          
-
-
             
-
             return new ExceledProductData
             {
                 Product = product,
@@ -456,5 +413,13 @@ namespace Nop.Ncc
             _productService.UpdateHasTierPricesProperty(product);
             _productService.UpdateHasDiscountsApplied(product);
             }
+
+        private void ProcessData(IEnumerable<ExceledProductData> productDatas)
+        {
+            foreach (var exceledProductData in productDatas)
+            {
+                ProceesProduct(exceledProductData);
+            }
+        }
     }
 }
