@@ -4189,9 +4189,6 @@ namespace Nop.Admin.Controllers
                 ErrorNotification(exc);
                 return RedirectToAction("List");
             }
-
-
-        
         }
 
         [HttpPost]
