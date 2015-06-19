@@ -19,6 +19,14 @@ using OfficeOpenXml.Drawing;
 
 namespace Nop.Ncc
 {
+    public static class CategoryExtend
+    {
+        public static Category GetCategoryByName(this ICategoryService categoryService, string catalogCategoryName)
+        {
+            return categoryService.GetAllCategories().FirstOrDefault(c => c.Name == catalogCategoryName);
+        }
+    }
+
     public class NccImportManager : ImportManager
     {
         private const string ErrorMessage = "Неправильный формат файла. Листы в нем не обнаружены";
@@ -57,17 +65,66 @@ namespace Nop.Ncc
         {
             var productDatas = GetProductsProductDatas(stream, ExistingInStore, false);
             ProcessData(productDatas);
+
+            UpdateCategoryImage(ExistingInStore);
         }
         
         public void InportInCategory(Stream stream, string fileName)
         {
             var productDatas = GetProductsProductDatas(stream, fileName, true);
             ProcessData(productDatas);
+
+            var categoryName = ConstractCategoryName(fileName);
+
+            // for category and ...
+            UpdateCategoryImage(categoryName);
+
+            // for root category
+            var category = _categoryService.GetCategoryByName(categoryName);
+            if (category.ParentCategoryId != 0)
+            {
+                UpdateCategoryImage(category.Id, category.ParentCategoryId);
+            }
+        }
+
+        private void UpdateCategoryImage(int categoryId)
+        {
+            var category = _categoryService.GetCategoryById(categoryId);
+            UpdateCategoryImage(category.Id, category.Id);
+        }
+
+        private void UpdateCategoryImage(string categoryName)
+        {
+            var categoryId = _categoryService.GetCategoryByName(categoryName).Id;
+            UpdateCategoryImage(categoryId, categoryId);
+        }
+
+        private void UpdateCategoryImage(int categoryToGetProductsId, int categoryIdToChangeImage)
+        {
+            var productCategory = _categoryService.GetProductCategoriesByCategoryId(categoryToGetProductsId, 0, 1000000).FirstOrDefault();
+
+            var product = _productService.GetProductById(productCategory.ProductId);
+
+            if (product != null)
+            {
+                var productPicture = product.ProductPictures.FirstOrDefault();
+                if (productPicture != null)
+                {
+                    var categortToUpdate = _categoryService.GetCategoryById(categoryIdToChangeImage);
+                    categortToUpdate.PictureId = productPicture.PictureId;
+                    _categoryService.UpdateCategory(categortToUpdate);
+                }
+            }
+        }
+
+        private string ConstractCategoryName(string fileName)
+        {
+            return  fileName.Replace(".xlsx", "");
         }
 
         private void AddInitCategory(string categoryName)
         {
-
+            // TODO: invistigate is this possible to have one method for category creation??? 
             // adding part
             var category = new Category
             {
@@ -82,6 +139,10 @@ namespace Nop.Ncc
 
             };
             _categoryService.InsertCategory(category);
+
+
+            var seName = category.ValidateSeName(category.Name, category.Name, true);
+            _urlRecordService.SaveSlug(category, seName, 0);
         }
 
         private List<ExceledProductData> GetProductsProductDatas(Stream stream, string fileName, bool addInCatalog = false)
@@ -103,7 +164,7 @@ namespace Nop.Ncc
                 const int secondItemPos = 3;
                 const int therdItemPos = 5;
 
-                var catalogName = fileName.Replace(".xlsx", ""); // remove xslt
+                var catalogName = ConstractCategoryName(fileName);
 
                 var rootCatId = 0;
                 if (addInCatalog)
@@ -165,6 +226,10 @@ namespace Nop.Ncc
                     
                     _categoryService.InsertCategory(category);
 
+                    var seName = category.ValidateSeName(category.Name, category.Name, true);
+                    _urlRecordService.SaveSlug(category, seName, 0);
+
+
                     var firstOrDefault = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == categoryName);
                     if (firstOrDefault != null)
                     {
@@ -172,11 +237,13 @@ namespace Nop.Ncc
                     }
                 }
 
-
                 // TODO impliment search mechanithm to find start position
                 var startRow = 2;
 
                 var callForPrice = addInCatalog;
+
+                var skipList = new List<int>();
+
                 while (true)
                 {
                     var allColumnsAreEmpty = true;
@@ -186,21 +253,31 @@ namespace Nop.Ncc
                             !String.IsNullOrEmpty(worksheet.Cells[startRow, i].Value.ToString()))
                         {
                             allColumnsAreEmpty = false;
-                            break;
+                            //break;
                         }
+                        else
+                        {
+                            skipList.Add(i);
+                        }
+
                     }
                     if (allColumnsAreEmpty)
                     {
                         break;
                     }
-
-                    result.Add(ConstructProduct(worksheet, startRow, firstItemPos, catId, callForPrice));
+                    if (!skipList.Contains(firstItemPos))
+                    {
+                        result.Add(ConstructProduct(worksheet, startRow, firstItemPos, catId, callForPrice));
+                    }
+                  
                     result.Add(ConstructProduct(worksheet, startRow, secondItemPos, catId, callForPrice));
                     result.Add(ConstructProduct(worksheet, startRow, therdItemPos, catId, callForPrice));
 
                     //next 3 product
                     startRow++;
                 }
+
+            
             }
 
             return result;
@@ -301,10 +378,12 @@ namespace Nop.Ncc
                 _productService.UpdateProduct(product);
             }
 
+            var seName = product.ValidateSeName(product.Name, product.Name, true);
+            _urlRecordService.SaveSlug(product, seName, 0);
+
+            var category = _categoryService.GetAllCategories().FirstOrDefault(c => c.Id == productData.CategoryId);
             
-            Category test = _categoryService.GetAllCategories().FirstOrDefault(c => c.Id == productData.CategoryId);
-            
-            if (test != null)
+            if (category != null)
             {
                 var productCategory = new ProductCategory
                 {
@@ -312,10 +391,11 @@ namespace Nop.Ncc
                     CategoryId = productData.CategoryId,
                   //DisplayOrder = model.DisplayOrder
                 };
-                 product.ProductCategories.Add(productCategory);
+                product.ProductCategories.Add(productCategory);
             }
 
-            #region
+            // TODO: delete unnided
+            #region previso version
             //search engine name
            // _urlRecordService.SaveSlug(product, product.ValidateSeName(seName, product.Name, true), 0); TODO: victor, invistigate
 
@@ -406,13 +486,12 @@ namespace Nop.Ncc
                     });
                     _productService.UpdateProduct(product);
                 }
-
             }
             
             //update "HasTierPrices" and "HasDiscountsApplied" properties
             _productService.UpdateHasTierPricesProperty(product);
             _productService.UpdateHasDiscountsApplied(product);
-            }
+        }
 
         private void ProcessData(IEnumerable<ExceledProductData> productDatas)
         {
