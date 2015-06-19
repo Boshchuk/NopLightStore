@@ -180,3 +180,12 @@ $RECYCLE.BIN/
  
 # Visual Studio 2014 CTP
 **/*.sln.ide
+
+#Thumbs
+Presentation/Nop.Web/Content/Images/Thumbs
+
+#real data for secure
+RealTestData/
+
+#previos site
+PreviosSite/
