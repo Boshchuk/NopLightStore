@@ -232,9 +232,18 @@ namespace Nop.Ncc
                     {
                         result.Add(ConstructProduct(worksheet, startRow, firstItemPos, catId, callForPrice));
                     }
-                  
-                    result.Add(ConstructProduct(worksheet, startRow, secondItemPos, catId, callForPrice));
-                    result.Add(ConstructProduct(worksheet, startRow, therdItemPos, catId, callForPrice));
+
+                    if (!skipList.Contains(secondItemPos))
+                    {
+                        result.Add(ConstructProduct(worksheet, startRow, secondItemPos, catId, callForPrice));
+                    }
+
+                    if (!skipList.Contains(therdItemPos))
+                    {
+                        result.Add(ConstructProduct(worksheet, startRow, therdItemPos, catId, callForPrice));
+                    }
+
+                    skipList.Clear();
 
                     //next 3 product
                     startRow++;
