@@ -4142,7 +4142,7 @@ namespace Nop.Admin.Controllers
 
             var fileName = file.FileName;
 
-            importManager.InportInCategory(file.InputStream,fileName);
+            importManager.InportInCatalog(file.InputStream,fileName);
         }
 
         private void NccImportAction(HttpPostedFileBase file)

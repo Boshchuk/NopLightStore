@@ -19,14 +19,6 @@ using OfficeOpenXml.Drawing;
 
 namespace Nop.Ncc
 {
-    public static class CategoryExtend
-    {
-        public static Category GetCategoryByName(this ICategoryService categoryService, string catalogCategoryName)
-        {
-            return categoryService.GetAllCategories().FirstOrDefault(c => c.Name == catalogCategoryName);
-        }
-    }
-
     public class NccImportManager : ImportManager
     {
         private const string ErrorMessage = "Неправильный формат файла. Листы в нем не обнаружены";
@@ -68,8 +60,13 @@ namespace Nop.Ncc
 
             UpdateCategoryImage(ExistingInStore);
         }
-        
-        public void InportInCategory(Stream stream, string fileName)
+
+        /// <summary>
+        /// Import Product in catalog
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="fileName"></param>
+        public void InportInCatalog(Stream stream, string fileName)
         {
             var productDatas = GetProductsProductDatas(stream, fileName, true);
             ProcessData(productDatas);
@@ -87,40 +84,6 @@ namespace Nop.Ncc
             }
         }
 
-        private void UpdateCategoryImage(int categoryId)
-        {
-            var category = _categoryService.GetCategoryById(categoryId);
-            UpdateCategoryImage(category.Id, category.Id);
-        }
-
-        private void UpdateCategoryImage(string categoryName)
-        {
-            var categoryId = _categoryService.GetCategoryByName(categoryName).Id;
-            UpdateCategoryImage(categoryId, categoryId);
-        }
-
-        private void UpdateCategoryImage(int categoryToGetProductsId, int categoryIdToChangeImage)
-        {
-            var productCategory = _categoryService.GetProductCategoriesByCategoryId(categoryToGetProductsId, 0, 1000000).FirstOrDefault();
-
-            var product = _productService.GetProductById(productCategory.ProductId);
-
-            if (product != null)
-            {
-                var productPicture = product.ProductPictures.FirstOrDefault();
-                if (productPicture != null)
-                {
-                    var categortToUpdate = _categoryService.GetCategoryById(categoryIdToChangeImage);
-                    categortToUpdate.PictureId = productPicture.PictureId;
-                    _categoryService.UpdateCategory(categortToUpdate);
-                }
-            }
-        }
-
-        private string ConstractCategoryName(string fileName)
-        {
-            return  fileName.Replace(".xlsx", "");
-        }
 
         private void AddInitCategory(string categoryName)
         {
@@ -499,6 +462,46 @@ namespace Nop.Ncc
             {
                 ProceesProduct(exceledProductData);
             }
+        }
+
+
+        /// <summary>
+        /// Updates category image by taking first products image in this category
+        /// </summary>
+        /// <param name="categoryName">Category name</param>
+        private void UpdateCategoryImage(string categoryName)
+        {
+            var categoryId = _categoryService.GetCategoryByName(categoryName).Id;
+            UpdateCategoryImage(categoryId, categoryId);
+        }
+
+
+        private void UpdateCategoryImage(int categoryToGetProductsId, int categoryIdToChangeImage)
+        {
+            var productCategory = _categoryService.GetProductCategoriesByCategoryId(categoryToGetProductsId, 0, 1000000).FirstOrDefault();
+
+            var product = _productService.GetProductById(productCategory.ProductId);
+
+            if (product != null)
+            {
+                var productPicture = product.ProductPictures.FirstOrDefault();
+                if (productPicture != null)
+                {
+                    var categortToUpdate = _categoryService.GetCategoryById(categoryIdToChangeImage);
+                    categortToUpdate.PictureId = productPicture.PictureId;
+                    _categoryService.UpdateCategory(categortToUpdate);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Constructs Category name from file name
+        /// </summary>
+        /// <param name="fileName">File name</param>
+        /// <returns>Categor name</returns>
+        private static string ConstractCategoryName(string fileName)
+        {
+            return fileName.Replace(".xlsx", "");
         }
     }
 }
