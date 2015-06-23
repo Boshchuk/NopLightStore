@@ -85,7 +85,7 @@ namespace Nop.Ncc
         }
 
 
-        private void AddInitCategory(string categoryName)
+        private void AddInitCategory(string categoryName, bool showOnHomePage = true)
         {
             // TODO: invistigate is this possible to have one method for category creation??? 
             // adding part
@@ -140,7 +140,7 @@ namespace Nop.Ncc
                     }
                     else
                     {
-                        AddInitCategory(CatalogCategoryName);
+                        AddInitCategory(CatalogCategoryName, !addInCatalog);
                         var category = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == CatalogCategoryName);
                         if (category != null)
                         {
@@ -228,6 +228,16 @@ namespace Nop.Ncc
                     {
                         break;
                     }
+
+                    // if we have additional header
+                    if (skipList.Count == 5)
+                    {
+                        // skipping all try to add
+                        skipList.Clear();
+                        startRow++;
+                        continue;
+                    }
+
                     if (!skipList.Contains(firstItemPos))
                     {
                         result.Add(ConstructProduct(worksheet, startRow, firstItemPos, catId, callForPrice));
@@ -248,14 +258,12 @@ namespace Nop.Ncc
                     //next 3 product
                     startRow++;
                 }
-
-            
             }
 
             return result;
         }
-        
-        public Picture GetPictureStrict(ExcelWorksheet worksheet, int row, int column , bool isNew)
+
+        private Picture GetPictureStrict(ExcelWorksheet worksheet, int row, int column, bool isNew)
         {
             var pictureRow = row - 1;
             var pictureColumn = column - 1;
@@ -267,24 +275,32 @@ namespace Nop.Ncc
             
             var picture = excelDrawing as ExcelPicture;
 
-
-            var stream = new MemoryStream();
-            picture.Image.Save(stream, picture.ImageFormat);
-            var streamreader = new BinaryReader(stream);
-
-            stream.Position = 0;
-
-            var data = streamreader.ReadBytes((int) stream.Length);
-            
-            var pict = new Picture
+            if (picture != null)
             {
-                IsNew = isNew, PictureBinary = data, MimeType = picture.ImageFormat.ToString()
-            };
+                var stream = new MemoryStream();
+                picture.Image.Save(stream, picture.ImageFormat);
+                var streamreader = new BinaryReader(stream);
 
-            return pict;
+                stream.Position = 0;
+
+                var data = streamreader.ReadBytes((int)stream.Length);
+
+                var pict = new Picture
+                {
+                    IsNew = isNew,
+                    PictureBinary = data,
+                    MimeType = picture.ImageFormat.ToString()
+                };
+                return pict;
+            }
+
+            return null;
+
+
+
         }
 
-        public ExceledProductData ConstructProduct(ExcelWorksheet worksheet, int iRow, int column, int categoryId, bool callForPrice = false)
+        private ExceledProductData ConstructProduct(ExcelWorksheet worksheet, int iRow, int column, int categoryId, bool callForPrice = false)
         {
             var priceColumn = column + 1;
 
@@ -336,7 +352,7 @@ namespace Nop.Ncc
             };
         }
 
-        public void ProceesProduct(ExceledProductData productData)
+        private void ProceesProduct(ExceledProductData productData)
         {
             var newProduct = productData.InNew;
             var product = productData.Product;

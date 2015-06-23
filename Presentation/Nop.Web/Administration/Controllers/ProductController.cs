@@ -4170,7 +4170,12 @@ namespace Nop.Admin.Controllers
 
             try
             {
-              
+                //calc products without images count 
+                var countBefore =
+                    _productService.SearchProducts()
+                        .Where(p => p.ProductPictures == null || p.ProductPictures.Count == 0).Count();
+
+
                 HttpPostedFileBase file = Request.Files["importexcelfile"];
                 if (file != null && file.ContentLength > 0)
                 {
@@ -4181,6 +4186,15 @@ namespace Nop.Admin.Controllers
                     ErrorNotification(_localizationService.GetResource("Admin.Common.UploadFile"));
                     return RedirectToAction("List");
                 }
+                var countAfter =
+                    _productService.SearchProducts()
+                        .Where(p => p.ProductPictures == null || p.ProductPictures.Count == 0).Count();
+
+                if (countAfter > countBefore)
+                {
+                    //TODO: add message that some productcs was added without images becos some reasons.
+                }
+
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Products.Imported"));
                 return RedirectToAction("List");
             }
