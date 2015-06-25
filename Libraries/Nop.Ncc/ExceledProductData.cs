@@ -7,7 +7,7 @@ namespace Nop.Ncc
     {
         public Product Product { get; set; }
 
-        public bool InNew { get; set; }
+        public bool IsNew { get; set; }
 
         public Picture Picture { get; set; }
 

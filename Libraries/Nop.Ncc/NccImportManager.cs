@@ -23,9 +23,7 @@ namespace Nop.Ncc
     {
         private const string ErrorMessage = "Неправильный формат файла. Листы в нем не обнаружены";
 
-        private const string CatalogCategoryName = "Каталог";
 
-        private const string ExistingInStore = "Товары в магазине";
 
         #region .ctor
         public NccImportManager(IProductService productService,
@@ -55,10 +53,10 @@ namespace Nop.Ncc
         /// <param name="stream">Stream</param>
         public override void ImportProductsFromXlsx(Stream stream)
         {
-            var productDatas = GetProductsProductDatas(stream, ExistingInStore, false);
+            var productDatas = GetProductsProductDatas(stream, ImportHelper.ExistingInStore, false);
             ProcessData(productDatas);
 
-            UpdateCategoryImage(ExistingInStore);
+            UpdateCategoryImage(ImportHelper.ExistingInStore);
         }
 
         /// <summary>
@@ -71,7 +69,7 @@ namespace Nop.Ncc
             var productDatas = GetProductsProductDatas(stream, fileName, true);
             ProcessData(productDatas);
 
-            var categoryName = ConstractCategoryName(fileName);
+            var categoryName = ImportHelper.ConstractCategoryName(fileName);
 
             // for category and ...
             UpdateCategoryImage(categoryName);
@@ -84,11 +82,14 @@ namespace Nop.Ncc
             }
         }
 
-
+        /// <summary>
+        /// Add some of base needed category for product
+        /// </summary>
+        /// <param name="categoryName">Category Name </param>
+        /// <param name="showOnHomePage">Show on home page</param>
         private void AddInitCategory(string categoryName, bool showOnHomePage = true)
         {
             // TODO: invistigate is this possible to have one method for category creation??? 
-            // adding part
             var category = new Category
             {
                 Name = categoryName,
@@ -96,18 +97,25 @@ namespace Nop.Ncc
                 UpdatedOnUtc = DateTime.UtcNow,
                 Published = true,
                 PageSize = 16,
-                ShowOnHomePage = true,
+                ShowOnHomePage = showOnHomePage,
                 IncludeInTopMenu = true,
                 DisplayOrder = 1,
 
             };
             _categoryService.InsertCategory(category);
-
-
+            
+            // uri part
             var seName = category.ValidateSeName(category.Name, category.Name, true);
             _urlRecordService.SaveSlug(category, seName, 0);
         }
 
+        /// <summary>
+        /// Exctract data from exel
+        /// </summary>
+        /// <param name="stream">Steam from excel file</param>
+        /// <param name="fileName">File name</param>
+        /// <param name="addInCatalog">Add to catalog or use like exist in store</param>
+        /// <returns></returns>
         private List<ExceledProductData> GetProductsProductDatas(Stream stream, string fileName, bool addInCatalog = false)
         {
             var result = new List<ExceledProductData>();
@@ -127,12 +135,14 @@ namespace Nop.Ncc
                 const int secondItemPos = 3;
                 const int therdItemPos = 5;
 
-                var catalogName = ConstractCategoryName(fileName);
+                var catalogName = ImportHelper.ConstractCategoryName(fileName);
 
                 var rootCatId = 0;
+
+                // add aditional CATALOG category as root category
                 if (addInCatalog)
                 {
-                    var rootCatalogCategory = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == CatalogCategoryName);
+                    var rootCatalogCategory = _categoryService.GetCategoryByName(ImportHelper.CatalogCategoryName);
 
                     if (rootCatalogCategory != null)
                     {
@@ -140,8 +150,9 @@ namespace Nop.Ncc
                     }
                     else
                     {
-                        AddInitCategory(CatalogCategoryName, !addInCatalog);
-                        var category = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == CatalogCategoryName);
+                        // we dont want display it on home page so second parameter is fales
+                        AddInitCategory(ImportHelper.CatalogCategoryName, false);
+                        var category = _categoryService.GetCategoryByName(ImportHelper.CatalogCategoryName);
                         if (category != null)
                         {
                             rootCatId = category.Id;
@@ -149,7 +160,7 @@ namespace Nop.Ncc
                     }
                 }
 
-                var cat = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == catalogName); //TODO chek by == name
+                var cat = _categoryService.GetCategoryByName(catalogName);
                 var catId = 0;
 
                 if (cat != null)
@@ -177,11 +188,12 @@ namespace Nop.Ncc
                         UpdatedOnUtc = DateTime.UtcNow,
                         Published = true,
                         PageSize = 16,
-                        ShowOnHomePage = true,// TODO: invistigate why its not dispalyed,
+                        ShowOnHomePage = true,
                         IncludeInTopMenu = true,
                         DisplayOrder = 1,
                     };
 
+                    // Add as child category if we have root category
                     if (addInCatalog)
                     {
                         category.ParentCategoryId = rootCatId;
@@ -193,7 +205,7 @@ namespace Nop.Ncc
                     _urlRecordService.SaveSlug(category, seName, 0);
 
 
-                    var firstOrDefault = _categoryService.GetAllCategories().FirstOrDefault(c => c.Name == categoryName);
+                    var firstOrDefault = _categoryService.GetCategoryByName(categoryName); //GetAllCategories().FirstOrDefault(c => c.Name == categoryName);
                     if (firstOrDefault != null)
                     {
                         catId = firstOrDefault.Id;
@@ -295,9 +307,6 @@ namespace Nop.Ncc
             }
 
             return null;
-
-
-
         }
 
         private ExceledProductData ConstructProduct(ExcelWorksheet worksheet, int iRow, int column, int categoryId, bool callForPrice = false)
@@ -346,7 +355,7 @@ namespace Nop.Ncc
             return new ExceledProductData
             {
                 Product = product,
-                InNew = isNew,
+                IsNew = isNew,
                 Picture = picture,
                 CategoryId = categoryId
             };
@@ -354,22 +363,15 @@ namespace Nop.Ncc
 
         private void ProceesProduct(ExceledProductData productData)
         {
-            var newProduct = productData.InNew;
+            var newProduct = productData.IsNew;
             var product = productData.Product;
-           
-            if (newProduct)
-            {
-                _productService.InsertProduct(product);
-            }
-            else
-            {
-                _productService.UpdateProduct(product);
-            }
-
+            product.HasTierPrices = false;
+            product.HasDiscountsApplied = false;
+            
             var seName = product.ValidateSeName(product.Name, product.Name, true);
             _urlRecordService.SaveSlug(product, seName, 0);
 
-            var category = _categoryService.GetAllCategories().FirstOrDefault(c => c.Id == productData.CategoryId);
+            var category = _categoryService.GetCategoryById(productData.CategoryId);
             
             if (category != null)
             {
@@ -377,70 +379,13 @@ namespace Nop.Ncc
                 {
                     ProductId = product.Id,
                     CategoryId = productData.CategoryId,
-                  //DisplayOrder = model.DisplayOrder
                 };
                 product.ProductCategories.Add(productCategory);
             }
 
-            // TODO: delete unnided
-            #region previso version
-            //search engine name
-           // _urlRecordService.SaveSlug(product, product.ValidateSeName(seName, product.Name, true), 0); TODO: victor, invistigate
-
-            //category mappings
-            //if (!String.IsNullOrEmpty(categoryIds))
-            //{
-            //    foreach (var id in categoryIds.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => Convert.ToInt32(x.Trim())))
-            //    {
-            //        if (product.ProductCategories.FirstOrDefault(x => x.CategoryId == id) == null)
-            //        {
-            //            //ensure that category exists
-            //            var category = _categoryService.GetCategoryById(id);
-            //            if (category != null)
-            //            {
-            //                var productCategory = new ProductCategory
-            //                {
-            //                    ProductId = product.Id,
-            //                    CategoryId = category.Id,
-            //                    IsFeaturedProduct = false,
-            //                    DisplayOrder = 1
-            //                };
-            //                _categoryService.InsertProductCategory(productCategory);
-            //            }
-            //        }
-            //    }
-            //}
-
-            //manufacturer mappings
-            //if (!String.IsNullOrEmpty(manufacturerIds))
-            //{
-            //    foreach (var id in manufacturerIds.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(x => Convert.ToInt32(x.Trim())))
-            //    {
-            //        if (product.ProductManufacturers.FirstOrDefault(x => x.ManufacturerId == id) == null)
-            //        {
-            //            //ensure that manufacturer exists
-            //            var manufacturer = _manufacturerService.GetManufacturerById(id);
-            //            if (manufacturer != null)
-            //            {
-            //                var productManufacturer = new ProductManufacturer
-            //                {
-            //                    ProductId = product.Id,
-            //                    ManufacturerId = manufacturer.Id,
-            //                    IsFeaturedProduct = false,
-            //                    DisplayOrder = 1
-            //                };
-            //                _manufacturerService.InsertProductManufacturer(productManufacturer);
-            //            }
-            //        }
-            //    }
-            //}
-
-            #endregion
-
-
             if (productData.Picture == null)
             {
-               
+               // TODO Set default pictures.
             }
             else
             {
@@ -472,13 +417,22 @@ namespace Nop.Ncc
                         Picture = _pictureService.InsertPicture(newPictureBinary, mimeType, _pictureService.GetPictureSeName(product.Name), true),
                         DisplayOrder = 1,
                     });
-                    _productService.UpdateProduct(product);
+                   // _productService.UpdateProduct(product);
                 }
             }
-            
+
+            if (newProduct)
+            {
+                _productService.InsertProduct(product);
+            }
+            else
+            {
+                _productService.UpdateProduct(product);
+            }
+
             //update "HasTierPrices" and "HasDiscountsApplied" properties
-            _productService.UpdateHasTierPricesProperty(product);
-            _productService.UpdateHasDiscountsApplied(product);
+            //_productService.UpdateHasTierPricesProperty(product);
+            //_productService.UpdateHasDiscountsApplied(product);
         }
 
         private void ProcessData(IEnumerable<ExceledProductData> productDatas)
@@ -500,33 +454,32 @@ namespace Nop.Ncc
             UpdateCategoryImage(categoryId, categoryId);
         }
 
-
-        private void UpdateCategoryImage(int categoryToGetProductsId, int categoryIdToChangeImage)
+        /// <summary>
+        /// Updates category image by getting image from some of product of specidied category
+        /// </summary>
+        /// <param name="categoryToToGetProductsFrom">Category to get products from </param>
+        /// <param name="categoryIdToChangeImage">Category where image will be chaged</param>
+        private void UpdateCategoryImage(int categoryToToGetProductsFrom, int categoryIdToChangeImage)
         {
-            var productCategory = _categoryService.GetProductCategoriesByCategoryId(categoryToGetProductsId, 0, 1000000).FirstOrDefault();
+            var productCategory = _categoryService.GetProductCategoriesByCategoryId(categoryToToGetProductsFrom, 0, 1000000).FirstOrDefault();
 
-            var product = _productService.GetProductById(productCategory.ProductId);
-
-            if (product != null)
+            if (productCategory != null)
             {
-                var productPicture = product.ProductPictures.FirstOrDefault();
-                if (productPicture != null)
+                var product = _productService.GetProductById(productCategory.ProductId);
+
+                if (product != null)
                 {
-                    var categortToUpdate = _categoryService.GetCategoryById(categoryIdToChangeImage);
-                    categortToUpdate.PictureId = productPicture.PictureId;
-                    _categoryService.UpdateCategory(categortToUpdate);
+                    var productPicture = product.ProductPictures.FirstOrDefault();
+                    if (productPicture != null)
+                    {
+                        var categortToUpdate = _categoryService.GetCategoryById(categoryIdToChangeImage);
+                        categortToUpdate.PictureId = productPicture.PictureId;
+                        _categoryService.UpdateCategory(categortToUpdate);
+                    }
                 }
             }
         }
 
-        /// <summary>
-        /// Constructs Category name from file name
-        /// </summary>
-        /// <param name="fileName">File name</param>
-        /// <returns>Categor name</returns>
-        private static string ConstractCategoryName(string fileName)
-        {
-            return fileName.Replace(".xlsx", "");
-        }
+     
     }
 }

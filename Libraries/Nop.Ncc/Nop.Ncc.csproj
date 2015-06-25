@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="CategoryExtend.cs" />
     <Compile Include="ExceledProductData.cs" />
+    <Compile Include="ImportHelper.cs" />
     <Compile Include="NccImportManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

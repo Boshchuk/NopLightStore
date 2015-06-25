@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -4129,7 +4130,7 @@ namespace Nop.Admin.Controllers
         [HttpPost]
         public ActionResult ImportInCategory()
         {
-            return FileAction(NccImportInCategoryAction);
+            return FileAction(NccImportInCategoryAction, true);
         }
 
         private void NccImportInCategoryAction(HttpPostedFileBase file)
@@ -4155,7 +4156,7 @@ namespace Nop.Admin.Controllers
             importManager.ImportProductsFromXlsx(file.InputStream);
         }
 
-        private ActionResult FileAction(Action<HttpPostedFileBase> action)
+        private ActionResult FileAction(Action<HttpPostedFileBase> action, bool importInCategory = false)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
             {
@@ -4170,13 +4171,47 @@ namespace Nop.Admin.Controllers
 
             try
             {
+                Stopwatch sw = Stopwatch.StartNew();
+              
+             
                 //calc products without images count 
                 var countBefore =
                     _productService.SearchProducts()
                         .Where(p => p.ProductPictures == null || p.ProductPictures.Count == 0).Count();
-
-
+                
                 HttpPostedFileBase file = Request.Files["importexcelfile"];
+
+                var categoryName = importInCategory ? ImportHelper.ConstractCategoryName(file.FileName) : ImportHelper.ExistingInStore;
+                
+                var category =  _categoryService.GetCategoryByName(categoryName);
+                int without = 0;
+                int willBeDeleted = 0;
+
+                int countProductWithoutImages;
+
+                if (category != null)
+                {
+                    var idList = new List<int>(){category.Id};
+                    var productsWithCategory = _productService.SearchProducts(categoryIds: idList);
+                    var coutOfRemovedProductsThatWithoutImages =  productsWithCategory.Where(p => p.ProductPictures == null || p.ProductPictures.Count == 0).Count();
+
+
+                    var products = _productService.SearchProducts();
+
+
+
+                    var productsCount = products.Count;
+
+
+                    countProductWithoutImages = countBefore - coutOfRemovedProductsThatWithoutImages;
+
+                    willBeDeleted = productsWithCategory.Count;
+                    without = productsCount - willBeDeleted ;
+
+                }
+
+
+
                 if (file != null && file.ContentLength > 0)
                 {
                     action(file);
@@ -4195,7 +4230,45 @@ namespace Nop.Admin.Controllers
                     //TODO: add message that some productcs was added without images becos some reasons.
                 }
 
-                SuccessNotification(_localizationService.GetResource("Admin.Catalog.Products.Imported"));
+                var addedCount = 0;
+
+                var addedWitoutImages = 0;
+
+                if (category == null)
+                {
+                    category = _categoryService.GetCategoryByName(categoryName);
+                }
+
+
+                if (category != null)
+                {
+                    var idList = new List<int>() { category.Id };
+                    var productsWithCategory = _productService.SearchProducts(categoryIds: idList);
+
+                    addedWitoutImages = productsWithCategory.Where(p => p.ProductPictures == null || p.ProductPictures.Count == 0).Count();
+
+
+                    var products = _productService.SearchProducts();
+
+                    var productsCount = products.Count;
+
+                    addedCount =  productsWithCategory.Count;
+
+                }
+
+
+                sw.Stop();
+
+                var elapsed = sw.Elapsed.TotalSeconds;
+           
+
+                var message = string.Format("{0}{1} За время: {2} сек. Удалено {3} Добавлено {4}  Добалено без картинок {5}", _localizationService.GetResource("Admin.Catalog.Products.Imported"),
+                    Environment.NewLine,
+                    elapsed,
+                    willBeDeleted,
+                    addedCount,
+                    addedWitoutImages);
+                SuccessNotification(message);
                 return RedirectToAction("List");
             }
             catch (Exception exc)
