@@ -4176,8 +4176,8 @@ namespace Nop.Admin.Controllers
              
                 //calc products without images count 
                 var countBefore =
-                    _productService.SearchProducts()
-                        .Where(p => p.ProductPictures == null || p.ProductPictures.Count == 0).Count();
+                    _productService
+                        .SearchProducts().Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
                 
                 HttpPostedFileBase file = Request.Files["importexcelfile"];
 
@@ -4193,7 +4193,7 @@ namespace Nop.Admin.Controllers
                 {
                     var idList = new List<int>(){category.Id};
                     var productsWithCategory = _productService.SearchProducts(categoryIds: idList);
-                    var coutOfRemovedProductsThatWithoutImages =  productsWithCategory.Where(p => p.ProductPictures == null || p.ProductPictures.Count == 0).Count();
+                    var coutOfRemovedProductsThatWithoutImages =  productsWithCategory.Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
 
 
                     var products = _productService.SearchProducts();
@@ -4222,8 +4222,8 @@ namespace Nop.Admin.Controllers
                     return RedirectToAction("List");
                 }
                 var countAfter =
-                    _productService.SearchProducts()
-                        .Where(p => p.ProductPictures == null || p.ProductPictures.Count == 0).Count();
+                    _productService
+                        .SearchProducts().Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
 
                 if (countAfter > countBefore)
                 {
@@ -4245,7 +4245,7 @@ namespace Nop.Admin.Controllers
                     var idList = new List<int>() { category.Id };
                     var productsWithCategory = _productService.SearchProducts(categoryIds: idList);
 
-                    addedWitoutImages = productsWithCategory.Where(p => p.ProductPictures == null || p.ProductPictures.Count == 0).Count();
+                    addedWitoutImages = productsWithCategory.Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
 
 
                     var products = _productService.SearchProducts();
@@ -4268,6 +4268,7 @@ namespace Nop.Admin.Controllers
                     willBeDeleted,
                     addedCount,
                     addedWitoutImages);
+
                 SuccessNotification(message);
                 return RedirectToAction("List");
             }
