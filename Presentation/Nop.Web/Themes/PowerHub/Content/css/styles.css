@@ -1547,3 +1547,10 @@ pre{white-space:pre-wrap;white-space:normal;word-wrap:break-word;}
 .color-options ul { padding: 0px; margin: 0px; margin-top: 10px; }
 .color-options ul li { padding: 5px 0px; margin: 0px; display: inline; margin-right: 10px; float:left;}
 .color-options ul li a{ width:35px; height:35px; border:3px solid #f7f7f7; overflow:hidden; display:block;}
+
+#logo {
+    font-size: 25px;
+    font-style: italic;
+    font-weight: bold;
+    font-family: Book Antiqua,Palatino,Palatino Linotype,Palatino LT STD,Georgia,serif;
+}

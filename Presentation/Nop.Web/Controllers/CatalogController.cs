@@ -1385,7 +1385,32 @@ namespace Nop.Web.Controllers
                         WorkingLanguageId = _workContext.WorkingLanguage.Id
                     });
                 }
+
+                if (products.Count == 0)
+                {
+                    var categoriesWithTerm = _categoryService.GetAllCategories().Where(c => c.Name.ToLowerInvariant().Contains(model.Q.ToLowerInvariant()));
+
+                    var categoriesProducts = new List<Product>();
+
+
+                    foreach (var item in categoriesWithTerm)
+                    {
+                        var ids = _categoryService.GetProductCategoriesByCategoryId(item.Id, 0, 100).Select(pm => pm.ProductId).ToArray();
+
+                        var productsById = _productService.GetProductsByIds(ids);
+
+                        categoriesProducts.AddRange(productsById);
+                    }
+
+                    foreach (var product in categoriesProducts)
+                    {
+                        products.Add(product);
+                    }
+                    model.Products = PrepareProductOverviewModels(products).ToList();
+                }
             }
+
+            
 
             model.PagingFilteringContext.LoadPagedList(products);
             return View(model);
@@ -1419,6 +1444,36 @@ namespace Nop.Web.Controllers
                 languageId: _workContext.WorkingLanguage.Id,
                 visibleIndividuallyOnly: true,
                 pageSize: productNumber);
+
+
+            // if standart product search returnes 0 products 
+            // try to find products by category name and add this results.
+
+            
+
+            if (products.Count == 0)
+            {
+                var categoriesWithTerm = _categoryService.GetAllCategories().Where(c => c.Name.ToLowerInvariant().Contains(term.ToLowerInvariant()));
+
+                var categoriesProducts = new List<Product>();
+
+
+                foreach (var item in categoriesWithTerm)
+                {
+                    var ids = _categoryService.GetProductCategoriesByCategoryId(item.Id, 0, 100).Select(pm => pm.ProductId).ToArray();
+
+                    var productsById = _productService.GetProductsByIds(ids);
+
+                    categoriesProducts.AddRange(productsById);
+                }
+
+                foreach (var product in categoriesProducts)
+                {
+                    products.Add(product);
+                }
+            }
+            
+
 
             var models =  PrepareProductOverviewModels(products, false, _catalogSettings.ShowProductImagesInSearchAutoComplete, _mediaSettings.AutoCompleteSearchThumbPictureSize).ToList();
             var result = (from p in models

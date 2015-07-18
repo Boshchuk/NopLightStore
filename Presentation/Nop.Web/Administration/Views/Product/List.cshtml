@@ -30,7 +30,9 @@
 
                 <input type="button" id="nccimportexcel" name="importexcel" class="k-button" value="Импорт продуктов в наличии" />
 
-                <input type="button" id="nccimportincategory" name="importexcel" class="k-button" value="Импорт в каталог" />
+                <input type="button" id="nccimportincategory" name="importexcel" class="k-button" value="Импорт в каталог"/>
+                
+                <input type="button" id="nccimportincategoryFromFolder" name="importexcel" class="k-button" value="Импорт в каталог из папки" style="display: none"/>
             }
             <input type="button" id="delete-selected" class="k-button" value="@T("Admin.Common.Delete.Selected")" />
         </div>
@@ -476,8 +478,49 @@
 </script>
 
 
-
-
+<!-- Import from folder -->
+<div id="nccimportincategoryFromFolder-window" style="display:none;">
+    @using (Html.BeginForm("ImportInCategoryFromFolder", "Product", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+        <table style="text-align:left;">
+            <tr>
+                <td colspan="2">
+                    <em>@T("Admin.Catalog.Products.List.ImportFromExcelTip")</em>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    @T("Admin.Common.ExcelFile"):
+                </td>
+                <td>
+                    <input type="file" id="importexcelfile" name="importexcelfile" />
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <input type="submit" class="k-button" value="@T("Admin.Common.ImportFromExcel")" />
+                </td>
+            </tr>
+        </table>
+    }
+</div>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $("#nccimportincategoryFromFolder").click(function(e) {
+            e.preventDefault();
+            var window = $("#nccimportincategoryFromFolder-window");
+            if (!window.data("kendoWindow")) {
+                window.kendoWindow({
+                    modal: true,
+                    width: "400px",
+                    title: "@T("Admin.Common.ImportFromCsv")",
+                    actions: ["Close"]
+                });
+            }
+            window.data('kendoWindow').center().open();
+        });
+    });
+</script>
 
 
 @*export selected (XML). We don't use GET approach because it's limited to 2K-4K chars and won't work for large number of entities*@

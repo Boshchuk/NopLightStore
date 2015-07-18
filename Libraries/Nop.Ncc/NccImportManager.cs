@@ -1,4 +1,5 @@
 ﻿#region Usings
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -116,7 +117,7 @@ namespace Nop.Ncc
         /// <param name="fileName">File name</param>
         /// <param name="addInCatalog">Add to catalog or use like exist in store</param>
         /// <returns></returns>
-        private List<ExceledProductData> GetProductsProductDatas(Stream stream, string fileName, bool addInCatalog = false)
+        private IEnumerable<ExceledProductData> GetProductsProductDatas(Stream stream, string fileName, bool addInCatalog = false)
         {
             var result = new List<ExceledProductData>();
 
@@ -205,7 +206,7 @@ namespace Nop.Ncc
                     _urlRecordService.SaveSlug(category, seName, 0);
 
 
-                    var firstOrDefault = _categoryService.GetCategoryByName(categoryName); //GetAllCategories().FirstOrDefault(c => c.Name == categoryName);
+                    var firstOrDefault = _categoryService.GetCategoryByName(categoryName);
                     if (firstOrDefault != null)
                     {
                         catId = firstOrDefault.Id;
@@ -225,7 +226,7 @@ namespace Nop.Ncc
                     for (var i = 1; i <= columsDataLength; i++)
                     {
                         if (worksheet.Cells[startRow, i].Value != null &&
-                            !String.IsNullOrEmpty(worksheet.Cells[startRow, i].Value.ToString()))
+                            !string.IsNullOrEmpty(worksheet.Cells[startRow, i].Value.ToString()))
                         {
                             allColumnsAreEmpty = false;
                             //break;
@@ -291,11 +292,13 @@ namespace Nop.Ncc
             {
                 var stream = new MemoryStream();
                 picture.Image.Save(stream, picture.ImageFormat);
-                var streamreader = new BinaryReader(stream);
+                byte[] data;
+                using (var streamreader = new BinaryReader(stream))
+                {
+                    stream.Position = 0;
 
-                stream.Position = 0;
-
-                var data = streamreader.ReadBytes((int)stream.Length);
+                    data = streamreader.ReadBytes((int) stream.Length);
+                }
 
                 var pict = new Picture
                 {
@@ -313,23 +316,35 @@ namespace Nop.Ncc
         {
             var priceColumn = column + 1;
 
-            var name = Convert.ToString(worksheet.Cells[iRow, column].Value);
-            var shortDescription = Convert.ToString(worksheet.Cells[iRow, column].Value);
-            var fullDescription = Convert.ToString(worksheet.Cells[iRow, column].Value);
+            var name = worksheet.Cells[iRow, column].Value.ToString();
+            var shortDescription = name; // Convert.ToString(worksheet.Cells[iRow, column].Value);
+            var fullDescription = name;  //Convert.ToString(worksheet.Cells[iRow, column].Value);
 
             var sku = Convert.ToString(worksheet.Cells[iRow, column].Value);
 
-            var price = Convert.ToDecimal(worksheet.Cells[iRow, priceColumn].Value);
+            decimal price = 0;
+            try
+            {
+                price  = Convert.ToDecimal(worksheet.Cells[iRow, priceColumn].Value);
+            }
+            catch (FormatException)
+            {
+                var str = worksheet.Cells[iRow, priceColumn].Value.ToString();
+                var newStr = (from c in str let isDigit = char.IsDigit(c) where isDigit select c).Aggregate(string.Empty, (current, c) => current + c);
+
+                price = Convert.ToDecimal(newStr);
+            }
+
 
             Product product = null;
 
-            if (_productService != null)
-            {
-                product = _productService.GetProductBySku(sku);
-            }
+            //if (_productService != null)
+            //{
+            //    product = _productService.GetProductBySku(sku);
+            //}
             
             var isNew = false;
-            if (product == null)
+            //if (product == null)
             {
                 product = new Product();
                 isNew = true;
@@ -341,8 +356,10 @@ namespace Nop.Ncc
 
             product.Price = price;
 
-            product.UpdatedOnUtc = DateTime.UtcNow;
-            product.CreatedOnUtc = DateTime.UtcNow;
+
+            var utcNow = DateTime.UtcNow;
+            product.UpdatedOnUtc = utcNow;
+            product.CreatedOnUtc = utcNow;
             product.Published = true;
 
             
@@ -361,19 +378,15 @@ namespace Nop.Ncc
             };
         }
 
-        private void ProceesProduct(ExceledProductData productData)
+        private void ProceesProduct(ExceledProductData productData, bool isCategoryNotNool)
         {
             var newProduct = productData.IsNew;
             var product = productData.Product;
             product.HasTierPrices = false;
             product.HasDiscountsApplied = false;
-            
-            var seName = product.ValidateSeName(product.Name, product.Name, true);
-            _urlRecordService.SaveSlug(product, seName, 0);
+           
 
-            var category = _categoryService.GetCategoryById(productData.CategoryId);
-            
-            if (category != null)
+            if (isCategoryNotNool)
             {
                 var productCategory = new ProductCategory
                 {
@@ -394,30 +407,32 @@ namespace Nop.Ncc
                 var pictureAlreadyExists = false;
                 if (!newProduct)
                 {
-                    //compare with existing product pictures
-                    var existingPictures = _pictureService.GetPicturesByProductId(product.Id);
-                    foreach (var existingPicture in existingPictures)
-                    {
-                        var existingBinary = _pictureService.LoadPictureBinary(existingPicture);
-                        //picture binary after validation (like in database)
-                        var validatedPictureBinary = _pictureService.ValidatePicture(newPictureBinary, mimeType);
-                        if (existingBinary.SequenceEqual(validatedPictureBinary))
-                        {
-                            //the same picture content
-                            pictureAlreadyExists = true;
-                            break;
-                        }
-                    }
+                    ////compare with existing product pictures
+                    //var existingPictures = _pictureService.GetPicturesByProductId(product.Id);
+                    //foreach (var existingPicture in existingPictures)
+                    //{
+                    //    var existingBinary = _pictureService.LoadPictureBinary(existingPicture);
+                    //    //picture binary after validation (like in database)
+                    //    var validatedPictureBinary = _pictureService.ValidatePicture(newPictureBinary, mimeType);
+                    //    if (existingBinary.SequenceEqual(validatedPictureBinary))
+                    //    {
+                    //        //the same picture content
+                    //        pictureAlreadyExists = true;
+                    //        break;
+                    //    }
+                    //}
                 }
 
                 if (!pictureAlreadyExists)
                 {
                     product.ProductPictures.Add(new ProductPicture
                     {
-                        Picture = _pictureService.InsertPicture(newPictureBinary, mimeType, _pictureService.GetPictureSeName(product.Name), true),
+                        Picture = _pictureService.InsertPicture(newPictureBinary,
+                        mimeType,
+                        _pictureService.GetPictureSeName(product.Name),
+                        true),
                         DisplayOrder = 1,
                     });
-                   // _productService.UpdateProduct(product);
                 }
             }
 
@@ -430,16 +445,25 @@ namespace Nop.Ncc
                 _productService.UpdateProduct(product);
             }
 
-            //update "HasTierPrices" and "HasDiscountsApplied" properties
-            //_productService.UpdateHasTierPricesProperty(product);
-            //_productService.UpdateHasDiscountsApplied(product);
+           // var seName = product.ValidateSeName(product.Name, product.Name, true);
+            _urlRecordService.SaveSlug(product, product.Name, 0);
         }
 
         private void ProcessData(IEnumerable<ExceledProductData> productDatas)
         {
-            foreach (var exceledProductData in productDatas)
+            var firstOrDefault = productDatas.FirstOrDefault();
+            if (firstOrDefault != null)
             {
-                ProceesProduct(exceledProductData);
+                var category = _categoryService.GetCategoryById(firstOrDefault.CategoryId);
+
+                var siCategoryNotNull = category != null;
+
+
+            
+                foreach (var exceledProductData in productDatas)
+                {
+                    ProceesProduct(exceledProductData, siCategoryNotNull);
+                }
             }
         }
 

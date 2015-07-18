@@ -4171,44 +4171,43 @@ namespace Nop.Admin.Controllers
 
             try
             {
-                Stopwatch sw = Stopwatch.StartNew();
+                var sw = Stopwatch.StartNew();
               
              
-                //calc products without images count 
-                var countBefore =
-                    _productService
-                        .SearchProducts().Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
+            
+                //var countBefore =
+                //    _productService
+                //        .SearchProducts().Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
                 
                 HttpPostedFileBase file = Request.Files["importexcelfile"];
 
-                var categoryName = importInCategory ? ImportHelper.ConstractCategoryName(file.FileName) : ImportHelper.ExistingInStore;
+                //var categoryName = importInCategory ? ImportHelper.ConstractCategoryName(file.FileName) : ImportHelper.ExistingInStore;
                 
-                var category =  _categoryService.GetCategoryByName(categoryName);
-                int without = 0;
-                int willBeDeleted = 0;
-
-                int countProductWithoutImages;
-
-                if (category != null)
-                {
-                    var idList = new List<int>(){category.Id};
-                    var productsWithCategory = _productService.SearchProducts(categoryIds: idList);
-                    var coutOfRemovedProductsThatWithoutImages =  productsWithCategory.Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
+                //var category =  _categoryService.GetCategoryByName(categoryName);
+                //int without = 0;
+                //int willBeDeleted = 0;
 
 
-                    var products = _productService.SearchProducts();
+                //if (category != null)
+                //{
+                //    var idList = new List<int>(){category.Id};
+                //    var productsWithCategory = _productService.SearchProducts(categoryIds: idList);
+                //    var coutOfRemovedProductsThatWithoutImages =  productsWithCategory.Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
+
+
+                //    var products = _productService.SearchProducts();
 
 
 
-                    var productsCount = products.Count;
+                //    var productsCount = products.Count;
 
 
-                    countProductWithoutImages = countBefore - coutOfRemovedProductsThatWithoutImages;
+                 
 
-                    willBeDeleted = productsWithCategory.Count;
-                    without = productsCount - willBeDeleted ;
+                //    willBeDeleted = productsWithCategory.Count;
+                 
 
-                }
+                //}
 
 
 
@@ -4221,40 +4220,40 @@ namespace Nop.Admin.Controllers
                     ErrorNotification(_localizationService.GetResource("Admin.Common.UploadFile"));
                     return RedirectToAction("List");
                 }
-                var countAfter =
-                    _productService
-                        .SearchProducts().Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
+                //var countAfter =
+                //    _productService
+                //        .SearchProducts().Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
 
-                if (countAfter > countBefore)
-                {
-                    //TODO: add message that some productcs was added without images becos some reasons.
-                }
+                //if (countAfter > countBefore)
+                //{
+                //    //TODO: add message that some productcs was added without images becos some reasons.
+                //}
 
-                var addedCount = 0;
+                //var addedCount = 0;
 
-                var addedWitoutImages = 0;
+                //var addedWitoutImages = 0;
 
-                if (category == null)
-                {
-                    category = _categoryService.GetCategoryByName(categoryName);
-                }
-
-
-                if (category != null)
-                {
-                    var idList = new List<int>() { category.Id };
-                    var productsWithCategory = _productService.SearchProducts(categoryIds: idList);
-
-                    addedWitoutImages = productsWithCategory.Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
+                //if (category == null)
+                //{
+                //    category = _categoryService.GetCategoryByName(categoryName);
+                //}
 
 
-                    var products = _productService.SearchProducts();
+                //if (category != null)
+                //{
+                //    var idList = new List<int>() { category.Id };
+                //    var productsWithCategory = _productService.SearchProducts(categoryIds: idList);
 
-                    var productsCount = products.Count;
+                //    addedWitoutImages = productsWithCategory.Count(p => p.ProductPictures == null || p.ProductPictures.Count == 0);
 
-                    addedCount =  productsWithCategory.Count;
 
-                }
+                //    var products = _productService.SearchProducts();
+
+                //    var productsCount = products.Count;
+
+                //    addedCount =  productsWithCategory.Count;
+
+                //}
 
 
                 sw.Stop();
@@ -4262,14 +4261,17 @@ namespace Nop.Admin.Controllers
                 var elapsed = sw.Elapsed.TotalSeconds;
            
 
-                var message = string.Format("{0}{1} За время: {2} сек. Удалено {3} Добавлено {4}  Добалено без картинок {5}", _localizationService.GetResource("Admin.Catalog.Products.Imported"),
-                    Environment.NewLine,
-                    elapsed,
-                    willBeDeleted,
-                    addedCount,
-                    addedWitoutImages);
+                //var message = string.Format("{0}{1} За время: {2} сек. Удалено {3} Добавлено {4}  Добалено без картинок {5}", _localizationService.GetResource("Admin.Catalog.Products.Imported"),
+                //    Environment.NewLine,
+                //    elapsed,
+                //    willBeDeleted,
+                //    addedCount,
+                //    addedWitoutImages);
 
-                SuccessNotification(message);
+               // SuccessNotification(message);
+                 SuccessNotification(elapsed + " " + _localizationService.GetResource("Admin.Catalog.Products.Imported"));
+                            
+
                 return RedirectToAction("List");
             }
             catch (Exception exc)
@@ -4283,6 +4285,41 @@ namespace Nop.Admin.Controllers
         public ActionResult NccImportExcel()
         {
             return FileAction(NccImportAction);
+        }
+
+        public ActionResult ImportInCategoryFromFolder()
+        {
+
+
+            var importManager = new NccImportManager(_productService,
+            this._categoryService,
+            this._manufacturerService,
+            this._pictureService,
+            this._urlRecordService, null, null, null, null);
+
+            var path = System.Configuration.ConfigurationSettings.AppSettings["CatalogLocation"];
+
+            string[] files = Directory.GetFiles(path, "*.xlsx", SearchOption.AllDirectories);
+
+            foreach (string filePath in files)
+            {
+
+                using (var stream = new FileStream(filePath, FileMode.Open))
+                {
+                    var pos = filePath.IndexOf("\\");
+                    var fileName =  filePath.Substring(pos+2);
+                    importManager.InportInCatalog(stream, fileName);
+                }
+
+                //  var fileName = file.FileName;
+
+                
+            }
+
+            
+
+            return RedirectToAction("List");
+            //throw new NotImplementedException();
         }
     }
 }
