@@ -430,7 +430,7 @@ namespace Nop.Ncc
                         Picture = _pictureService.InsertPicture(newPictureBinary,
                         mimeType,
                         _pictureService.GetPictureSeName(product.Name),
-                        true),
+                        false),
                         DisplayOrder = 1,
                     });
                 }

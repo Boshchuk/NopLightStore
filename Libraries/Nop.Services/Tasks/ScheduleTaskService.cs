@@ -22,6 +22,22 @@ namespace Nop.Services.Tasks
         public ScheduleTaskService(IRepository<ScheduleTask> taskRepository)
         {
             this._taskRepository = taskRepository;
+
+            if (_taskRepository.GetById(10) == null)
+            {
+                var task = new ScheduleTask
+                {
+
+                    Id = 10,
+                    Name = "Import from catalog",
+                    Seconds = 60000,
+                    Type = "Nop.Services.ExportImport.ImportProductFromFolderTask, Nop.Services",
+                    Enabled = false,
+                    StopOnError = true,
+                };
+                this._taskRepository.Insert(task);
+            }
+            
         }
 
         #endregion

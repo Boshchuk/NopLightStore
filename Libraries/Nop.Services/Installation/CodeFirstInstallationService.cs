@@ -9843,6 +9843,7 @@ namespace Nop.Services.Installation
                     Enabled = true,
                     StopOnError = false,
                 },
+
             };
 
             tasks.ForEach(x => _scheduleTaskRepository.Insert(x));

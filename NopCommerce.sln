@@ -559,9 +559,6 @@ Global
 		{7142908C-225F-4493-9147-4AC879983581} = {E4ACA93B-D3DE-4557-B069-F1DB42925A4B}
 		{2CB846D9-C3E6-4AD0-9A8E-627C2AF20F66} = {A340B280-C12B-47E7-90B7-89C650F8AAFC}
 	EndGlobalSection
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(NDepend) = preSolution
 		Project = ".\NopCommerce.ndproj"
 	EndGlobalSection
