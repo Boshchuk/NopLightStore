@@ -461,7 +461,7 @@ namespace Nop.Services.Catalog
             var allowedCustomerRolesIds = _workContext.CurrentCustomer.CustomerRoles
                 .Where(cr => cr.Active).Select(cr => cr.Id).ToList();
 
-            if (_commonSettings.UseStoredProceduresIfSupported && _dataProvider.StoredProceduredSupported)
+            if (false /*_commonSettings.UseStoredProceduresIfSupported && _dataProvider.StoredProceduredSupported*/)
             {
                 //stored procedures are enabled and supported by the database. 
                 //It's much faster than the LINQ implementation below 
@@ -686,7 +686,8 @@ namespace Nop.Services.Catalog
                     pShowHidden,
                     pLoadFilterableSpecificationAttributeOptionIds,
                     pFilterableSpecificationAttributeOptionIds,
-                    pTotalRecords);
+                    pTotalRecords).OrderBy(d=>d.DisplayOrder).ToList();
+                var c = products.Select(p => p.DisplayOrder);
                 //get filterable specification attribute option identifier
                 string filterableSpecificationAttributeOptionIdsStr = (pFilterableSpecificationAttributeOptionIds.Value != DBNull.Value) ? (string)pFilterableSpecificationAttributeOptionIds.Value : "";
                 if (loadFilterableSpecificationAttributeOptionIds &&
@@ -947,7 +948,7 @@ namespace Nop.Services.Catalog
                 else if (orderBy == ProductSortingEnum.CreatedOn)
                 {
                     //creation date
-                    query = query.OrderByDescending(p => p.CreatedOnUtc);
+                    query = query.OrderBy(p => p.CreatedOnUtc);
                 }
                 else
                 {
@@ -955,6 +956,9 @@ namespace Nop.Services.Catalog
                     query = query.OrderBy(p => p.Name);
                 }
 
+                query = query.OrderBy(p => p.DisplayOrder);
+
+               // query = query.OrderBy(p => p.DisplayOrder);
                 var products = new PagedList<Product>(query, pageIndex, pageSize);
 
                 //get filterable specification attribute option identifier

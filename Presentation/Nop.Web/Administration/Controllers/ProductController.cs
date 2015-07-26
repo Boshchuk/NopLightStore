@@ -4306,20 +4306,12 @@ namespace Nop.Admin.Controllers
 
                 using (var stream = new FileStream(filePath, FileMode.Open))
                 {
-                    var pos = filePath.IndexOf("\\");
-                    var fileName =  filePath.Substring(pos+2);
+         
+                    var fileName = Path.GetFileName(filePath);
                     importManager.InportInCatalog(stream, fileName);
                 }
-
-                //  var fileName = file.FileName;
-
-                
             }
-
-            
-
             return RedirectToAction("List");
-            //throw new NotImplementedException();
         }
     }
 }

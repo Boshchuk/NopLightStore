@@ -590,7 +590,7 @@ namespace Nop.Web.Controllers
                 orderBy: (ProductSortingEnum)command.OrderBy,
                 pageIndex: command.PageNumber - 1,
                 pageSize: command.PageSize);
-            model.Products = PrepareProductOverviewModels(products).ToList();
+            model.Products = PrepareProductOverviewModels(products). ToList();
 
             model.PagingFilteringContext.LoadPagedList(products);
 

@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Nop.Core;
@@ -23,8 +24,6 @@ namespace Nop.Ncc
     public class NccImportManager : ImportManager
     {
         private const string ErrorMessage = "Неправильный формат файла. Листы в нем не обнаружены";
-
-
 
         #region .ctor
         public NccImportManager(IProductService productService,
@@ -220,6 +219,10 @@ namespace Nop.Ncc
 
                 var skipList = new List<int>();
 
+                var dispalyOrder = 1;
+                var attempt = 0;
+
+
                 while (true)
                 {
                     var allColumnsAreEmpty = true;
@@ -229,6 +232,7 @@ namespace Nop.Ncc
                             !string.IsNullOrEmpty(worksheet.Cells[startRow, i].Value.ToString()))
                         {
                             allColumnsAreEmpty = false;
+                            attempt = 0;
                             //break;
                         }
                         else
@@ -239,7 +243,11 @@ namespace Nop.Ncc
                     }
                     if (allColumnsAreEmpty)
                     {
-                        break;
+                        attempt++;
+                        if (attempt > 1)
+                        {
+                            break;
+                        }
                     }
 
                     // if we have additional header
@@ -253,19 +261,46 @@ namespace Nop.Ncc
 
                     if (!skipList.Contains(firstItemPos))
                     {
-                        result.Add(ConstructProduct(worksheet, startRow, firstItemPos, catId, callForPrice));
+                        var constructProduct = ConstructProduct(worksheet, startRow, firstItemPos, catId, dispalyOrder,callForPrice);
+                        if (constructProduct != null)
+                        {
+                            result.Add(constructProduct);
+                        }
+                        
                     }
+                    dispalyOrder++;
+
+                    Trace.WriteLine(dispalyOrder);
 
                     if (!skipList.Contains(secondItemPos))
                     {
-                        result.Add(ConstructProduct(worksheet, startRow, secondItemPos, catId, callForPrice));
+                        var constructProduct = ConstructProduct(worksheet, startRow, secondItemPos, catId, dispalyOrder,
+                            callForPrice);
+
+
+                        if (constructProduct != null)
+                        {
+                            result.Add(constructProduct);
+                        }
                     }
+                    dispalyOrder++;
+
+                    Trace.WriteLine(dispalyOrder);
+
 
                     if (!skipList.Contains(therdItemPos))
                     {
-                        result.Add(ConstructProduct(worksheet, startRow, therdItemPos, catId, callForPrice));
+                        var constructProduct = ConstructProduct(worksheet, startRow, therdItemPos, catId, dispalyOrder, callForPrice);
+
+                        if (constructProduct != null)
+                        {
+                            result.Add(constructProduct);
+                        }
                     }
 
+                    dispalyOrder++;
+
+                    Trace.WriteLine(dispalyOrder);
                     skipList.Clear();
 
                     //next 3 product
@@ -312,7 +347,7 @@ namespace Nop.Ncc
             return null;
         }
 
-        private ExceledProductData ConstructProduct(ExcelWorksheet worksheet, int iRow, int column, int categoryId, bool callForPrice = false)
+        private ExceledProductData ConstructProduct(ExcelWorksheet worksheet, int iRow, int column, int categoryId, int displayOrder,bool callForPrice = false)
         {
             var priceColumn = column + 1;
 
@@ -320,7 +355,7 @@ namespace Nop.Ncc
             var shortDescription = name; // Convert.ToString(worksheet.Cells[iRow, column].Value);
             var fullDescription = name;  //Convert.ToString(worksheet.Cells[iRow, column].Value);
 
-            var sku = Convert.ToString(worksheet.Cells[iRow, column].Value);
+            // var sku = Convert.ToString(worksheet.Cells[iRow, column].Value);
 
             decimal price = 0;
             try
@@ -332,23 +367,21 @@ namespace Nop.Ncc
                 var str = worksheet.Cells[iRow, priceColumn].Value.ToString();
                 var newStr = (from c in str let isDigit = char.IsDigit(c) where isDigit select c).Aggregate(string.Empty, (current, c) => current + c);
 
-                price = Convert.ToDecimal(newStr);
+                try
+                {
+                    price = Convert.ToDecimal(newStr);
+                }
+                catch (FormatException)
+                {
+                    return null;
+                }
             }
 
 
-            Product product = null;
-
-            //if (_productService != null)
-            //{
-            //    product = _productService.GetProductBySku(sku);
-            //}
+            var product = new Product();
             
-            var isNew = false;
-            //if (product == null)
-            {
-                product = new Product();
-                isNew = true;
-            }
+            const bool isNew = true;
+            
 
             product.Name = name;
             product.ShortDescription = shortDescription;
@@ -366,6 +399,9 @@ namespace Nop.Ncc
             product.ProductType = ProductType.SimpleProduct;
             product.VisibleIndividually = true;
             product.CallForPrice = callForPrice;
+
+            product.DisplayOrder = displayOrder;
+            product.Sku = name;
 
             var picture = GetPictureStrict(worksheet, iRow, column, isNew);
             
@@ -445,8 +481,8 @@ namespace Nop.Ncc
                 _productService.UpdateProduct(product);
             }
 
-           // var seName = product.ValidateSeName(product.Name, product.Name, true);
-            _urlRecordService.SaveSlug(product, product.Name, 0);
+            var seName = product.ValidateSeName(product.Name, product.Name, true);
+            _urlRecordService.SaveSlug(product, seName, 0);
         }
 
         private void ProcessData(IEnumerable<ExceledProductData> productDatas)
