@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Nop.Ncc;
+//using Nop.Ncc;
 using Nop.Services.Catalog;
 using Nop.Services.Media;
 using Nop.Services.Seo;
@@ -31,34 +31,34 @@ namespace Nop.Services.ExportImport
 
         public void Execute()
         {
-            var importManager = new NccImportManager(_productService,
-            this._categoryService,
-            this._manufacturerService,
-            this._pictureService,
-            this._urlRecordService,
-            null,
-            null,
-            null,
-            null);
+            //var importManager = new NccImportManager(_productService,
+            //this._categoryService,
+            //this._manufacturerService,
+            //this._pictureService,
+            //this._urlRecordService,
+            //null,
+            //null,
+            //null,
+            //null);
 
-            var path = System.Configuration.ConfigurationSettings.AppSettings["CatalogLocation"];
+            //var path = System.Configuration.ConfigurationSettings.AppSettings["CatalogLocation"];
 
-            string[] files = System.IO.Directory.GetFiles(path, "*.xlsx", SearchOption.AllDirectories);
+            //string[] files = System.IO.Directory.GetFiles(path, "*.xlsx", SearchOption.AllDirectories);
 
-            foreach (string filePath in files)
-            {
+            //foreach (string filePath in files)
+            //{
 
-                using (var stream = new FileStream(filePath, FileMode.Open))
-                {
-                    var pos = filePath.IndexOf("\\");
-                    var fileName = filePath.Substring(pos + 2);
-                    importManager.InportInCatalog(stream, fileName);
-                }
+            //    using (var stream = new FileStream(filePath, FileMode.Open))
+            //    {
+            //        var pos = filePath.IndexOf("\\");
+            //        var fileName = filePath.Substring(pos + 2);
+            //        importManager.InportInCatalog(stream, fileName);
+            //    }
 
-                //  var fileName = file.FileName;
+            //    //  var fileName = file.FileName;
 
 
-            }
+            //}
         }
     }
 }
