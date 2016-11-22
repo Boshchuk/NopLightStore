@@ -1,2 +1,2 @@
 DataProvider: sqlserver
-DataConnectionString: Data Source=NCC-TESTPC\SQLEXPRESS;Initial Catalog=LightStortDB;Integrated Security=True;Persist Security Info=False
+DataConnectionString: Data Source=DESKTOP-ITPADK3\SQLEXPRESS;Initial Catalog=LightStore;Integrated Security=True;Persist Security Info=False
