@@ -15,7 +15,7 @@
     <AssemblyName>Nop.Admin</AssemblyName>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <MvcBuildViews>false</MvcBuildViews>
-    <UseIISExpress>false</UseIISExpress>
+    <UseIISExpress>true</UseIISExpress>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <UpgradeBackupLocation>
@@ -1279,7 +1279,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>2454</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost/Nop.Admin</IISUrl>
+          <IISUrl>http://localhost:2454/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>http://www.nopcommerce.com/</CustomServerUrl>
