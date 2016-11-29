@@ -88,7 +88,7 @@ namespace Nop.Ncc
         /// </summary>
         /// <param name="categoryName">Category Name </param>
         /// <param name="showOnHomePage">Show on home page</param>
-        private void 00(string categoryName, bool showOnHomePage = true)
+        private void AddInitCategory(string categoryName, bool showOnHomePage = true)
         {
             // TODO: invistigate is this possible to have one method for category creation??? 
             var category = new Category
