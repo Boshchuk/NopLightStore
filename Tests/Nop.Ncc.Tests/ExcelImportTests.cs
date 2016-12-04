@@ -6,8 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Schema;
 using NUnit.Framework;
-using OfficeOpenXml;
-using OfficeOpenXml.Drawing;
+//using OfficeOpenXml;
+//using OfficeOpenXml.Drawing;
 
 namespace Nop.Ncc.Tests
 {
