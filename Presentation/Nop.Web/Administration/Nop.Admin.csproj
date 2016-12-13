@@ -1279,7 +1279,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>2454</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:2454/</IISUrl>
+          <IISUrl>http://localhost/Nop.Admin</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>http://www.nopcommerce.com/</CustomServerUrl>
