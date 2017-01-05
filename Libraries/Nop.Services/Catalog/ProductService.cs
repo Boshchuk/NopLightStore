@@ -248,7 +248,7 @@ namespace Nop.Services.Catalog
             _cacheManager.RemoveByPattern(PRODUCTS_PATTERN_KEY);
             
             //event notification
-            _eventPublisher.EntityInserted(product);
+            //_eventPublisher.EntityInserted(product);
         }
 
         /// <summary>
@@ -267,7 +267,7 @@ namespace Nop.Services.Catalog
             _cacheManager.RemoveByPattern(PRODUCTS_PATTERN_KEY);
 
             //event notification
-            _eventPublisher.EntityUpdated(product);
+            //_eventPublisher.EntityUpdated(product);
         }
 
         /// <summary>
@@ -1430,7 +1430,7 @@ namespace Nop.Services.Catalog
             _relatedProductRepository.Delete(relatedProduct);
 
             //event notification
-            _eventPublisher.EntityDeleted(relatedProduct);
+            //_eventPublisher.EntityDeleted(relatedProduct);
         }
 
         /// <summary>
@@ -1690,7 +1690,7 @@ namespace Nop.Services.Catalog
             _cacheManager.RemoveByPattern(PRODUCTS_PATTERN_KEY);
 
             //event notification
-            _eventPublisher.EntityUpdated(tierPrice);
+           // _eventPublisher.EntityUpdated(tierPrice);
         }
 
         #endregion
@@ -1709,7 +1709,7 @@ namespace Nop.Services.Catalog
             _productPictureRepository.Delete(productPicture);
 
             //event notification
-            _eventPublisher.EntityDeleted(productPicture);
+           // _eventPublisher.EntityDeleted(productPicture);
         }
 
         /// <summary>
@@ -1752,7 +1752,7 @@ namespace Nop.Services.Catalog
             _productPictureRepository.Insert(productPicture);
 
             //event notification
-            _eventPublisher.EntityInserted(productPicture);
+            //_eventPublisher.EntityInserted(productPicture);
         }
 
         /// <summary>
@@ -1767,7 +1767,7 @@ namespace Nop.Services.Catalog
             _productPictureRepository.Update(productPicture);
 
             //event notification
-            _eventPublisher.EntityUpdated(productPicture);
+          //  _eventPublisher.EntityUpdated(productPicture);
         }
 
         #endregion

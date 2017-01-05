@@ -45,7 +45,7 @@ namespace Nop.Admin.Controllers
     {
         #region Fields
 
-        private readonly IProductService _productService;
+        private readonly INccProductService _productService;
         private readonly IProductTemplateService _productTemplateService;
         private readonly ICategoryService _categoryService;
         private readonly IManufacturerService _manufacturerService;
@@ -90,7 +90,7 @@ namespace Nop.Admin.Controllers
 
 		#region Constructors
 
-        public ProductController(IProductService productService, 
+        public ProductController(INccProductService productService, 
             IProductTemplateService productTemplateService,
             ICategoryService categoryService, 
             IManufacturerService manufacturerService,

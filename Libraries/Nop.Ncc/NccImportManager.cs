@@ -25,6 +25,9 @@ namespace Nop.Ncc
     {
         private const string ErrorMessage = "Неправильный формат файла. Листы в нем не обнаружены";
 
+        protected readonly INccProductService _productService;
+
+
         // TODO: почитать что такое DI IOC
         #region .ctor
         public NccImportManager(IProductService productService,
@@ -41,11 +44,27 @@ namespace Nop.Ncc
 
         }
 
+        public NccImportManager(INccProductService productService,
+            ICategoryService categoryService,
+            IManufacturerService manufacturerService,
+            IPictureService pictureService,
+            IUrlRecordService urlRecordService,
+            IStoreContext storeContext,
+            INewsLetterSubscriptionService newsLetterSubscriptionService,
+            ICountryService countryService,
+            IStateProvinceService stateProvinceService)
+            : base(productService, categoryService, manufacturerService, pictureService, urlRecordService, storeContext, newsLetterSubscriptionService, countryService, stateProvinceService)
+        {
+            _productService = productService;
+        }
+
         public NccImportManager()
             : base(null, null, null, null, null, null, null, null, null)
         {
 
         }
+
+
         #endregion
 
         /// <summary>
@@ -171,11 +190,14 @@ namespace Nop.Ncc
                     var list = _categoryService.GetProductCategoriesByCategoryId(catId, 0, 1000000);
 
                     var ids = list.Select(c => c.ProductId);
-
+                    var productsToDelete = new List<Product>();
                     foreach (var id in ids)
                     {
                         var productToDelete = _productService.GetProductById(id);
-                        _productService.DeleteProduct(productToDelete);
+
+                        productToDelete.Deleted = true;
+                        productsToDelete.Add(productToDelete);
+                        _productService.UpdateProducts(productsToDelete.ToArray());
                     }
                 }
                 else
@@ -415,7 +437,7 @@ namespace Nop.Ncc
             };
         }
 
-        private void ProceesProduct(ExceledProductData productData, bool isCategoryNotNool)
+        private ProductProcessResult ProceesProduct(ExceledProductData productData, bool isCategoryNotNool)
         {
             var newProduct = productData.IsNew;
             var product = productData.Product;
@@ -473,17 +495,27 @@ namespace Nop.Ncc
                 }
             }
 
+            var seName = product.ValidateSeName(product.Name, product.Name, true);
+            _urlRecordService.SaveSlug(product, seName, 0);
+
             if (newProduct)
             {
-                _productService.InsertProduct(product);
+                //_productService.InsertProduct(product);
+                return new ProductProcessResult()
+                {
+                    Product = product,
+                    ProductType = NewProductType.ToInsert
+                };
             }
             else
             {
-                _productService.UpdateProduct(product);
+               // _productService.UpdateProduct(product);
+                return new ProductProcessResult()
+                {
+                    Product = product,
+                    ProductType = NewProductType.ToUpdate
+                };
             }
-
-            var seName = product.ValidateSeName(product.Name, product.Name, true);
-            _urlRecordService.SaveSlug(product, seName, 0);
         }
 
         private void ProcessData(IEnumerable<ExceledProductData> productDatas)
@@ -496,10 +528,32 @@ namespace Nop.Ncc
                 var siCategoryNotNull = category != null;
 
 
-            
+                var pruductsToInsert = new List<Product>();
+                var pruductsToUpdate = new List<Product>();
+
                 foreach (var exceledProductData in productDatas)
                 {
-                    ProceesProduct(exceledProductData, siCategoryNotNull);
+                     var proceesProduct =   ProceesProduct(exceledProductData, siCategoryNotNull);
+
+                    if (proceesProduct.ProductType == NewProductType.ToInsert)
+                    {
+                        pruductsToInsert.Add(proceesProduct.Product);
+                    }
+                    if (proceesProduct.ProductType == NewProductType.ToUpdate)
+                    {
+                        pruductsToUpdate.Add(proceesProduct.Product);
+                    }
+                }
+
+                if (pruductsToInsert.Count > 0)
+                {
+                    _productService.InsertProducts(pruductsToInsert.ToArray());
+                }
+
+
+                if (pruductsToUpdate.Count > 0)
+                {
+                    _productService.UpdateProducts(pruductsToUpdate.ToArray());
                 }
             }
         }

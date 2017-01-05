@@ -218,6 +218,10 @@
       <Project>{CCD7F2C9-6A2C-4CF0-8E89-076B8FC0F144}</Project>
       <Name>Nop.Data</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Libraries\Nop.Ncc\Nop.Ncc.csproj">
+      <Project>{7142908C-225F-4493-9147-4AC879983581}</Project>
+      <Name>Nop.Ncc</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Libraries\Nop.Services\Nop.Services.csproj">
       <Project>{210541ad-f659-47da-8763-16f36c5cd2f4}</Project>
       <Name>Nop.Services</Name>

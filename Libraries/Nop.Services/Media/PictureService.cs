@@ -649,7 +649,7 @@ namespace Nop.Services.Media
                 SavePictureInFile(picture.Id, pictureBinary, mimeType);
             
             //event notification
-            _eventPublisher.EntityInserted(picture);
+            //_eventPublisher.EntityInserted(picture);
 
             return picture;
         }

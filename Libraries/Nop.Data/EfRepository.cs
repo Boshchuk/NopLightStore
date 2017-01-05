@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.Entity.Migrations;
 using System.Data.Entity.Validation;
 using System.Linq;
 using Nop.Core;
@@ -115,6 +116,29 @@ namespace Nop.Data
             try
             {
                 if (entity == null)
+                    throw new ArgumentNullException("entity");
+
+                this._context.SaveChanges();
+            }
+            catch (DbEntityValidationException dbEx)
+            {
+                var msg = string.Empty;
+
+                foreach (var validationErrors in dbEx.EntityValidationErrors)
+                    foreach (var validationError in validationErrors.ValidationErrors)
+                        msg += Environment.NewLine + string.Format("Property: {0} Error: {1}", validationError.PropertyName, validationError.ErrorMessage);
+
+                var fail = new Exception(msg, dbEx);
+                //Debug.WriteLine(fail.Message, fail);
+                throw fail;
+            }
+        }
+
+        public void Update(IEnumerable<T> entities)
+        {
+            try
+            {
+                if (entities == null)
                     throw new ArgumentNullException("entity");
 
                 this._context.SaveChanges();
