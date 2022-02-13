@@ -188,17 +188,29 @@ namespace Nop.Ncc
                     catId = cat.Id;
 
                     var list = _categoryService.GetProductCategoriesByCategoryId(catId, 0, 1000000);
-
-                    var ids = list.Select(c => c.ProductId);
-                    var productsToDelete = new List<Product>();
-                    foreach (var id in ids)
+                    if (list.Count > 0)
                     {
-                        var productToDelete = _productService.GetProductById(id);
+                        var ids = list.Select(c => c.ProductId);
+                        var productsToDelete = new List<Product>();
 
-                        productToDelete.Deleted = true;
-                        productsToDelete.Add(productToDelete);
-                        _productService.UpdateProducts(productsToDelete.ToArray());
+                        productsToDelete = _productService.GetProductsByIds(ids.ToArray()).ToList();
+                        _productService.DeleteProducts(productsToDelete.ToArray());
                     }
+                    
+                    //foreach (var id in ids)
+                    //{
+                    //    var productToDelete = _productService.GetProductById(id);
+
+                    //    productToDelete.Deleted = true;
+                    //    productsToDelete.Add(productToDelete);
+
+                    //}
+                    //foreach (var product in productsToDelete)
+                    //{
+                    //    _productService.DeleteProducts();
+                    //}
+
+                    //_productService.UpdateProducts(productsToDelete.ToArray());
                 }
                 else
                 {
